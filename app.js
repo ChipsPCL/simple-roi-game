@@ -21,8 +21,10 @@ const CONTRACT_ADDRESS = "0xa986e428b39abea31c982fe02b283b845e3005c8";
 
 const ABI = [
     "function deposit(uint256 amount)",
-    "function userInfo(address) view returns (uint256 deposited, uint256 claimable, uint256 claimed)"
+    "function userInfo(address) view returns (uint256 deposited, uint256 claimable, uint256 claimed)",
+    "function depositToken() view returns (address)"
 ];
+
 
 // ERC20 ABI (approve only)
 const ERC20_ABI = [
