@@ -6,6 +6,7 @@ const statusBox = document.getElementById("status");
 const btnConnect = document.getElementById("btnConnect");
 const btnDeposit = document.getElementById("btnDeposit");
 const btnClaim = document.getElementById("btnClaim");
+const inputDeposit = document.getElementById("inputDeposit");
 
 /* =========================
    CONTRACT CONFIG
@@ -16,11 +17,16 @@ const CONTRACT_ADDRESS = "0xa986e428b39abea31c982fe02b283b845e3005c8";
 const ABI = [
     "function userInfo(address) view returns (uint256 deposited, uint256 claimable, uint256 claimed)",
     "function deposit(uint256 amount)",
-    "function claim()",
-    "function depositToken() view returns (address)"
+    "function claim()"
 ];
 
 let contract;
+
+/* =========================
+   NETWORK CONFIG
+========================= */
+
+const BASE_CHAIN_ID = 8453; // Base mainnet
 
 /* =========================
    WALLET CONNECT
@@ -39,76 +45,25 @@ btnConnect.onclick = async () => {
         signer = await provider.getSigner();
         userAddress = await signer.getAddress();
 
-        contract = new ethers.Contract(
-            CONTRACT_ADDRESS,
-            ABI,
-            signer
-        );
+        contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+
+        const network = await provider.getNetwork();
+        if (network.chainId !== BASE_CHAIN_ID) {
+            statusBox.innerText = `Wrong network! Please switch to Base (chainId ${BASE_CHAIN_ID})`;
+            btnDeposit.disabled = true;
+            btnClaim.disabled = true;
+            return;
+        }
 
         statusBox.innerText = `Connected: ${userAddress}`;
-        console.log("Connected:", userAddress);
+        btnDeposit.disabled = false;
+        btnClaim.disabled = false;
 
         await refreshUserData();
 
     } catch (err) {
         console.error(err);
         statusBox.innerText = "Connection failed";
-    }
-};
-
-/* =========================
-   DEPOSIT BUTTON
-========================= */
-
-btnDeposit.onclick = async () => {
-    const inputDeposit = document.getElementById("inputDeposit");
-    const amount = inputDeposit.value;
-
-    if (!amount || Number(amount) <= 0) {
-        alert("Enter a valid amount");
-        return;
-    }
-
-    try {
-        const tokenAddress = await contract.depositToken();
-        const tokenContract = new ethers.Contract(
-            tokenAddress,
-            ["function approve(address spender, uint256 amount) public returns (bool)"],
-            signer
-        );
-
-        const parsedAmount = ethers.parseUnits(amount, 18);
-
-        // Approve contract to spend tokens first
-        const approveTx = await tokenContract.approve(CONTRACT_ADDRESS, parsedAmount);
-        await approveTx.wait();
-
-        // Deposit
-        const tx = await contract.deposit(parsedAmount);
-        await tx.wait();
-
-        console.log("Deposit successful:", amount);
-        await refreshUserData();
-
-    } catch (err) {
-        console.error("Deposit failed:", err);
-        alert("Deposit failed, check console");
-    }
-};
-
-/* =========================
-   CLAIM BUTTON
-========================= */
-
-btnClaim.onclick = async () => {
-    try {
-        const tx = await contract.claim();
-        await tx.wait();
-        console.log("Claim successful");
-        await refreshUserData();
-    } catch (err) {
-        console.error("Claim failed:", err);
-        alert("Claim failed, check console");
     }
 };
 
@@ -122,8 +77,6 @@ async function refreshUserData() {
     try {
         const info = await contract.userInfo(userAddress);
 
-        console.log("User info:", info);
-
         const depositedEl = document.getElementById("deposited");
         const pendingEl = document.getElementById("pending");
         const claimedEl = document.getElementById("claimed");
@@ -134,6 +87,50 @@ async function refreshUserData() {
 
     } catch (err) {
         console.error("Refresh failed:", err);
-        statusBox.innerText = "Failed to refresh data";
+        statusBox.innerText = "Failed to refresh user data";
     }
 }
+
+/* =========================
+   DEPOSIT BUTTON
+========================= */
+
+btnDeposit.onclick = async () => {
+    if (!contract || !userAddress) return;
+    const amount = inputDeposit.value;
+    if (!amount || Number(amount) <= 0) {
+        alert("Enter a valid amount to deposit");
+        return;
+    }
+
+    try {
+        const tx = await contract.deposit(ethers.parseUnits(amount, 18));
+        statusBox.innerText = "Depositing...";
+        await tx.wait();
+        statusBox.innerText = `Deposited ${amount}`;
+        inputDeposit.value = "";
+        await refreshUserData();
+    } catch (err) {
+        console.error(err);
+        statusBox.innerText = "Deposit failed";
+    }
+};
+
+/* =========================
+   CLAIM BUTTON
+========================= */
+
+btnClaim.onclick = async () => {
+    if (!contract || !userAddress) return;
+
+    try {
+        const tx = await contract.claim();
+        statusBox.innerText = "Claiming...";
+        await tx.wait();
+        statusBox.innerText = "Claim successful";
+        await refreshUserData();
+    } catch (err) {
+        console.error(err);
+        statusBox.innerText = "Claim failed (maybe no rewards yet)";
+    }
+};
