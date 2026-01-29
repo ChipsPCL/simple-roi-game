@@ -20,6 +20,7 @@
             padding: 10px;
             margin-top: 10px;
             width: 100%;
+            box-sizing: border-box;
         }
         .box {
             margin: 15px 0;
@@ -32,20 +33,19 @@
 
     <h1>The 1% Game</h1>
 
-    <!-- Wallet Connect -->
     <button id="btnConnect">Connect Wallet</button>
     <div class="box" id="status">Not connected</div>
 
-    <!-- Player Stats -->
+    <!-- Player stats -->
     <div class="box">Player Deposits: <span id="deposited">0</span></div>
     <div class="box">Pending Rewards: <span id="pending">0</span></div>
     <div class="box">Total Claimed: <span id="claimed">0</span></div>
 
-    <!-- Deposit -->
-    <input type="number" id="inputDeposit" placeholder="Amount to deposit" min="0" step="any" />
+    <!-- Deposit section -->
+    <input type="number" id="inputDeposit" placeholder="Enter deposit amount" min="0" step="any">
     <button id="btnDeposit">Deposit</button>
 
-    <!-- Claim -->
+    <!-- Claim rewards -->
     <button id="btnClaim">Claim Rewards</button>
 
     <script src="app.js"></script>
