@@ -26,6 +26,12 @@
             padding: 10px;
             background: #222;
         }
+        input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 8px;
+            box-sizing: border-box;
+        }
     </style>
 </head>
 <body>
@@ -35,10 +41,20 @@
     <button id="btnConnect">Connect Wallet</button>
     <div class="box" id="status">Not connected</div>
 
-    <!-- NEW UI BOXES -->
+    <!-- INFO BOXES -->
     <div class="box">Player Deposits: <span id="deposited">0</span></div>
     <div class="box">Pending Rewards: <span id="pending">0</span></div>
     <div class="box">Total Claimed: <span id="claimed">0</span></div>
+
+    <!-- STEP 8: DEPOSIT UI -->
+    <div class="box">
+        <input
+            id="depositAmount"
+            type="number"
+            placeholder="Amount to deposit"
+        />
+        <button id="btnDeposit">Deposit</button>
+    </div>
 
     <script src="app.js"></script>
 </body>
