@@ -6,6 +6,11 @@ const statusBox = document.getElementById("status");
 const btnConnect = document.getElementById("btnConnect");
 const btnDeposit = document.getElementById("btnDeposit");
 const btnClaim = document.getElementById("btnClaim");
+const inputDeposit = document.getElementById("inputDeposit");
+
+const depositedEl = document.getElementById("deposited");
+const pendingEl = document.getElementById("pending");
+const claimedEl = document.getElementById("claimed");
 
 /* =========================
    CONTRACT CONFIG
@@ -14,13 +19,14 @@ const btnClaim = document.getElementById("btnClaim");
 const CONTRACT_ADDRESS = "0xa986e428b39abea31c982fe02b283b845e3005c8";
 
 const ABI = [
-    "function userInfo(address) view returns (uint256 deposited, uint256 claimable, uint256 claimed)",
-    "function deposit(uint256 amount)",
-    "function claim()",
-    "function depositToken() view returns (address)"
+  "function userInfo(address) view returns (uint256 deposited, uint256 claimable, uint256 claimed)",
+  "function deposit(uint256 amount) nonpayable",
+  "function claim() nonpayable",
+  "function depositToken() view returns (address)"
 ];
 
 let contract;
+let tokenContract;
 
 /* =========================
    WALLET CONNECT
@@ -39,14 +45,13 @@ btnConnect.onclick = async () => {
         signer = await provider.getSigner();
         userAddress = await signer.getAddress();
 
-        contract = new ethers.Contract(
-            CONTRACT_ADDRESS,
-            ABI,
-            signer
-        );
+        contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+
+        // Token contract for decimals
+        const tokenAddr = await contract.depositToken();
+        tokenContract = new ethers.Contract(tokenAddr, ["function decimals() view returns (uint8)"], provider);
 
         statusBox.innerText = `Connected: ${userAddress}`;
-        console.log("Connected:", userAddress);
 
         await refreshUserData();
 
@@ -57,42 +62,42 @@ btnConnect.onclick = async () => {
 };
 
 /* =========================
+   READ USER DATA
+========================= */
+
+async function refreshUserData() {
+    if (!contract || !userAddress) return;
+
+    try {
+        const info = await contract.userInfo(userAddress);
+        const decimals = await tokenContract.decimals();
+
+        depositedEl.innerText = ethers.formatUnits(info.deposited, decimals);
+        pendingEl.innerText = ethers.formatUnits(info.claimable, decimals);
+        claimedEl.innerText = ethers.formatUnits(info.claimed, decimals);
+
+    } catch (err) {
+        console.error("Refresh failed:", err);
+    }
+}
+
+/* =========================
    DEPOSIT BUTTON
 ========================= */
 
 btnDeposit.onclick = async () => {
-    const inputDeposit = document.getElementById("inputDeposit");
+    if (!contract || !signer) return;
     const amount = inputDeposit.value;
-
-    if (!amount || Number(amount) <= 0) {
-        alert("Enter a valid amount");
-        return;
-    }
+    if (!amount || Number(amount) <= 0) return alert("Enter deposit amount");
 
     try {
-        const tokenAddress = await contract.depositToken();
-        const tokenContract = new ethers.Contract(
-            tokenAddress,
-            ["function approve(address spender, uint256 amount) public returns (bool)"],
-            signer
-        );
-
-        const parsedAmount = ethers.parseUnits(amount, 18);
-
-        // Approve contract to spend tokens first
-        const approveTx = await tokenContract.approve(CONTRACT_ADDRESS, parsedAmount);
-        await approveTx.wait();
-
-        // Deposit
-        const tx = await contract.deposit(parsedAmount);
+        const decimals = await tokenContract.decimals();
+        const amt = ethers.parseUnits(amount, decimals);
+        const tx = await contract.deposit(amt);
         await tx.wait();
-
-        console.log("Deposit successful:", amount);
         await refreshUserData();
-
     } catch (err) {
         console.error("Deposit failed:", err);
-        alert("Deposit failed, check console");
     }
 };
 
@@ -101,39 +106,13 @@ btnDeposit.onclick = async () => {
 ========================= */
 
 btnClaim.onclick = async () => {
+    if (!contract || !signer) return;
+
     try {
         const tx = await contract.claim();
         await tx.wait();
-        console.log("Claim successful");
         await refreshUserData();
     } catch (err) {
         console.error("Claim failed:", err);
-        alert("Claim failed, check console");
     }
 };
-
-/* =========================
-   REFRESH USER DATA
-========================= */
-
-async function refreshUserData() {
-    if (!contract || !userAddress) return;
-
-    try {
-        const info = await contract.userInfo(userAddress);
-
-        console.log("User info:", info);
-
-        const depositedEl = document.getElementById("deposited");
-        const pendingEl = document.getElementById("pending");
-        const claimedEl = document.getElementById("claimed");
-
-        depositedEl.innerText = ethers.formatUnits(info.deposited, 18);
-        pendingEl.innerText = ethers.formatUnits(info.claimable, 18);
-        claimedEl.innerText = ethers.formatUnits(info.claimed, 18);
-
-    } catch (err) {
-        console.error("Refresh failed:", err);
-        statusBox.innerText = "Failed to refresh data";
-    }
-}
