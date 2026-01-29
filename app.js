@@ -56,9 +56,23 @@ btnConnect.onclick = async () => {
 ========================= */
 
 async function refreshUserData() {
-    const info = await contract.userInfo(userAddress);
+    if (!contract || !userAddress) return;
 
-    console.log("User info:", info);
+    try {
+        const info = await contract.userInfo(userAddress);
 
-    // We’ll display this next step
+        console.log("User info:", info);
+
+        const depositedEl = document.getElementById("deposited");
+        const pendingEl = document.getElementById("pending");
+        const claimedEl = document.getElementById("claimed");
+
+        depositedEl.innerText = ethers.formatUnits(info.deposited, 18);
+        pendingEl.innerText = ethers.formatUnits(info.claimable, 18);
+        claimedEl.innerText = ethers.formatUnits(info.claimed, 18);
+
+    } catch (err) {
+        console.error("Failed to refresh user data:", err);
+    }
 }
+
