@@ -4,23 +4,18 @@ let userAddress;
 let contract;
 let token;
 
-const statusBox = document.getElementById("status");
-const btnConnect = document.getElementById("btnConnect");
-const btnDeposit = document.getElementById("btnDeposit");
-
 /* =========================
    CONFIG
 ========================= */
 
 const CONTRACT_ADDRESS = "0xa986e428b39abea31c982fe02b283b845e3005c8";
 
-// 🔥 EXACT ABI FROM BASESCAN (trimmed to what we use)
 const ABI = [
     "function deposit(uint256 amount)",
     "function claim()",
-    "function userInfo(address) view returns (uint256 deposited, uint256 claimable, uint256 claimed)",
+    "function depositToken() view returns (address)",
     "function pendingRewards(address) view returns (uint256)",
-    "function depositToken() view returns (address)"
+    "function userInfo(address) view returns (uint256 deposited, uint256 claimable, uint256 claimed)"
 ];
 
 const ERC20_ABI = [
@@ -30,45 +25,51 @@ const ERC20_ABI = [
 ];
 
 /* =========================
-   WALLET CONNECT
+   ELEMENTS
+========================= */
+
+const statusBox = document.getElementById("status");
+const btnConnect = document.getElementById("btnConnect");
+const btnDeposit = document.getElementById("btnDeposit");
+
+/* =========================
+   CONNECT WALLET
 ========================= */
 
 btnConnect.onclick = async () => {
-    if (!window.ethereum) {
-        statusBox.innerText = "No wallet detected";
-        return;
-    }
-
     try {
+        if (!window.ethereum) {
+            statusBox.innerText = "No wallet found";
+            return;
+        }
+
         provider = new ethers.BrowserProvider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
 
         signer = await provider.getSigner();
         userAddress = await signer.getAddress();
 
-        contract = new ethers.Contract(
-            CONTRACT_ADDRESS,
-            ABI,
-            provider
-        );
+        contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
 
         const tokenAddress = await contract.depositToken();
         token = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
 
         statusBox.innerText = `Connected: ${userAddress}`;
-        await refreshUserData();
+
+        // Try refresh safely
+        await safeRefresh();
 
     } catch (err) {
-        console.error(err);
-        statusBox.innerText = "Connection failed";
+        console.error("Connect error:", err);
+        statusBox.innerText = "Wallet connection failed";
     }
 };
 
 /* =========================
-   REFRESH USER DATA
+   SAFE REFRESH
 ========================= */
 
-async function refreshUserData() {
+async function safeRefresh() {
     try {
         const info = await contract.userInfo(userAddress);
 
@@ -82,20 +83,26 @@ async function refreshUserData() {
             ethers.formatUnits(info.claimed, 18);
 
     } catch (err) {
-        console.error("Refresh failed:", err);
+        console.warn("userInfo not available yet (safe to ignore)");
     }
 }
 
 /* =========================
-   DEPOSIT (APPROVE + DEPOSIT)
+   DEPOSIT FLOW
 ========================= */
 
 btnDeposit.onclick = async () => {
     try {
-        const amountInput = document.getElementById("depositAmount").value;
-        if (!amountInput || amountInput <= 0) return;
+        const input = document.getElementById("depositAmount");
+        if (!input) {
+            alert("Deposit input not found");
+            return;
+        }
 
-        const amount = ethers.parseUnits(amountInput, 18);
+        const raw = input.value;
+        if (!raw || raw <= 0) return;
+
+        const amount = ethers.parseUnits(raw, 18);
 
         const allowance = await token.allowance(userAddress, CONTRACT_ADDRESS);
 
@@ -106,14 +113,14 @@ btnDeposit.onclick = async () => {
         }
 
         statusBox.innerText = "Depositing...";
-        const depositTx = await contract.connect(signer).deposit(amount);
-        await depositTx.wait();
+        const tx = await contract.connect(signer).deposit(amount);
+        await tx.wait();
 
         statusBox.innerText = "Deposit successful";
-        await refreshUserData();
+        await safeRefresh();
 
     } catch (err) {
-        console.error(err);
+        console.error("Deposit failed:", err);
         statusBox.innerText = "Deposit failed";
     }
 };
