@@ -132,6 +132,8 @@ btnDeposit.onclick = async () => {
 ========================= */
 
 btnClaim.onclick = async () => {
+   console.log("CLAIM BUTTON CLICKED"); // 👈 DO NOT SKIP THIS
+   
     try {
         statusBox.innerText = "Claiming rewards...";
         const tx = await contract.connect(signer).claim();
