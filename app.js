@@ -2,117 +2,118 @@ let provider;
 let signer;
 let userAddress;
 let contract;
+let token;
 
-// =========================
-// CONTRACT CONFIG
-// =========================
-const CONTRACT_ADDRESS = "0xa986e428b39abea31c982fe02b283b845e3005c8";
-
-// Minimal ABI for your contract (full ABI would also work)
-const ABI = [
-  "function userInfo(address) view returns (uint256 deposited, uint256 claimable, uint256 claimed)",
-  "function deposit(uint256 amount) nonpayable",
-  "function claim() nonpayable"
-];
-
-// =========================
-// ELEMENTS
-// =========================
 const statusBox = document.getElementById("status");
 const btnConnect = document.getElementById("btnConnect");
 const btnDeposit = document.getElementById("btnDeposit");
-const btnClaim = document.getElementById("btnClaim");
-const inputDeposit = document.getElementById("inputDeposit");
 
-const depositedEl = document.getElementById("deposited");
-const pendingEl = document.getElementById("pending");
-const claimedEl = document.getElementById("claimed");
+/* =========================
+   CONFIG
+========================= */
 
-// =========================
-// WALLET CONNECT
-// =========================
+const CONTRACT_ADDRESS = "0xa986e428b39abea31c982fe02b283b845e3005c8";
+
+// 🔥 EXACT ABI FROM BASESCAN (trimmed to what we use)
+const ABI = [
+    "function deposit(uint256 amount)",
+    "function claim()",
+    "function userInfo(address) view returns (uint256 deposited, uint256 claimable, uint256 claimed)",
+    "function pendingRewards(address) view returns (uint256)",
+    "function depositToken() view returns (address)"
+];
+
+const ERC20_ABI = [
+    "function approve(address spender, uint256 amount)",
+    "function allowance(address owner, address spender) view returns (uint256)",
+    "function decimals() view returns (uint8)"
+];
+
+/* =========================
+   WALLET CONNECT
+========================= */
+
 btnConnect.onclick = async () => {
-  if (!window.ethereum) {
-    statusBox.innerText = "No wallet detected";
-    return;
-  }
+    if (!window.ethereum) {
+        statusBox.innerText = "No wallet detected";
+        return;
+    }
 
-  try {
-    provider = new ethers.BrowserProvider(window.ethereum);
-    await provider.send("eth_requestAccounts", []);
+    try {
+        provider = new ethers.BrowserProvider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
 
-    signer = await provider.getSigner();
-    userAddress = await signer.getAddress();
+        signer = await provider.getSigner();
+        userAddress = await signer.getAddress();
 
-    contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
+        contract = new ethers.Contract(
+            CONTRACT_ADDRESS,
+            ABI,
+            provider
+        );
 
-    statusBox.innerText = `Connected: ${userAddress}`;
-    console.log("Connected:", userAddress);
+        const tokenAddress = await contract.depositToken();
+        token = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
 
-    await refreshUserData();
+        statusBox.innerText = `Connected: ${userAddress}`;
+        await refreshUserData();
 
-  } catch (err) {
-    console.error(err);
-    statusBox.innerText = "Connection failed";
-  }
+    } catch (err) {
+        console.error(err);
+        statusBox.innerText = "Connection failed";
+    }
 };
 
-// =========================
-// REFRESH USER DATA
-// =========================
-async function refreshUserData() {
-  if (!contract || !userAddress) return;
+/* =========================
+   REFRESH USER DATA
+========================= */
 
-  try {
-    const info = await contract.userInfo(userAddress);
-    depositedEl.innerText = ethers.formatUnits(info.deposited, 18);
-    pendingEl.innerText = ethers.formatUnits(info.claimable, 18);
-    claimedEl.innerText = ethers.formatUnits(info.claimed, 18);
-  } catch (err) {
-    console.error("Refresh failed:", err);
-  }
+async function refreshUserData() {
+    try {
+        const info = await contract.userInfo(userAddress);
+
+        document.getElementById("deposited").innerText =
+            ethers.formatUnits(info.deposited, 18);
+
+        document.getElementById("pending").innerText =
+            ethers.formatUnits(info.claimable, 18);
+
+        document.getElementById("claimed").innerText =
+            ethers.formatUnits(info.claimed, 18);
+
+    } catch (err) {
+        console.error("Refresh failed:", err);
+    }
 }
 
-// =========================
-// DEPOSIT
-// =========================
+/* =========================
+   DEPOSIT (APPROVE + DEPOSIT)
+========================= */
+
 btnDeposit.onclick = async () => {
-  if (!signer || !contract) return;
+    try {
+        const amountInput = document.getElementById("depositAmount").value;
+        if (!amountInput || amountInput <= 0) return;
 
-  const amountStr = inputDeposit.value;
-  if (!amountStr || isNaN(amountStr) || Number(amountStr) <= 0) {
-    alert("Enter a valid amount");
-    return;
-  }
+        const amount = ethers.parseUnits(amountInput, 18);
 
-  const amount = ethers.parseUnits(amountStr, 18); // assuming 18 decimals
+        const allowance = await token.allowance(userAddress, CONTRACT_ADDRESS);
 
-  try {
-    const tx = await contract.connect(signer).deposit(amount);
-    statusBox.innerText = "Deposit pending...";
-    await tx.wait();
-    statusBox.innerText = "Deposit successful!";
-    await refreshUserData();
-  } catch (err) {
-    console.error("Deposit failed:", err);
-    statusBox.innerText = "Deposit failed";
-  }
-};
+        if (allowance < amount) {
+            statusBox.innerText = "Approving token...";
+            const approveTx = await token.approve(CONTRACT_ADDRESS, amount);
+            await approveTx.wait();
+        }
 
-// =========================
-// CLAIM
-// =========================
-btnClaim.onclick = async () => {
-  if (!signer || !contract) return;
+        statusBox.innerText = "Depositing...";
+        const depositTx = await contract.connect(signer).deposit(amount);
+        await depositTx.wait();
 
-  try {
-    const tx = await contract.connect(signer).claim();
-    statusBox.innerText = "Claim pending...";
-    await tx.wait();
-    statusBox.innerText = "Claim successful!";
-    await refreshUserData();
-  } catch (err) {
-    console.error("Claim failed:", err);
-    statusBox.innerText = "Claim failed";
-  }
+        statusBox.innerText = "Deposit successful";
+        await refreshUserData();
+
+    } catch (err) {
+        console.error(err);
+        statusBox.innerText = "Deposit failed";
+    }
 };
