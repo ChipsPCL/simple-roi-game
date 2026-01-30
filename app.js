@@ -28,17 +28,34 @@ const ERC20_ABI = [
    ELEMENTS
 ========================= */
 
-const statusBox = document.getElementById("status");
-const btnConnect = document.getElementById("btnConnect");
-const btnDeposit = document.getElementById("btnDeposit");
-const btnClaim = document.getElementById("btnClaim");
+let statusBox;
+let btnConnect;
+let btnDeposit;
+let btnClaim;
+
+document.addEventListener("DOMContentLoaded", () => {
+    statusBox = document.getElementById("status");
+    btnConnect = document.getElementById("btnConnect");
+    btnDeposit = document.getElementById("btnDeposit");
+    btnClaim = document.getElementById("btnClaim");
+
+    // reattach existing handlers (no logic change)
+    btnConnect.onclick = btnConnectHandler;
+    btnDeposit.onclick = btnDepositHandler;
+    btnClaim.onclick = btnClaimHandler;
+});
+
+
 
 
 /* =========================
    CONNECT WALLET
 ========================= */
 
-btnConnect.onclick = async () => {
+async function btnConnectHandler() {
+    ...
+}
+
     try {
         if (!window.ethereum) {
             statusBox.innerText = "No wallet found";
@@ -93,7 +110,10 @@ async function safeRefresh() {
    DEPOSIT FLOW
 ========================= */
 
-btnDeposit.onclick = async () => {
+async function btnDepositHandler() {
+    ...
+}
+
     try {
         const input = document.getElementById("depositAmount");
         if (!input) {
@@ -131,7 +151,10 @@ btnDeposit.onclick = async () => {
    CLAIM
 ========================= */
 
-btnClaim.onclick = async () => {
+async function btnClaimHandler() {
+    ...
+}
+
     try {
         statusBox.innerText = "Claiming rewards...";
 
