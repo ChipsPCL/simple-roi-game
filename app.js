@@ -28,31 +28,16 @@ const ERC20_ABI = [
    ELEMENTS
 ========================= */
 
-let statusBox;
-let btnConnect;
-let btnDeposit;
-let btnClaim;
-
-document.addEventListener("DOMContentLoaded", () => {
-    statusBox = document.getElementById("status");
-    btnConnect = document.getElementById("btnConnect");
-    btnDeposit = document.getElementById("btnDeposit");
-    btnClaim = document.getElementById("btnClaim");
-
-    // reattach existing handlers (no logic change)
-    btnConnect.onclick = btnConnectHandler;
-    btnDeposit.onclick = btnDepositHandler;
-    btnClaim.onclick = btnClaimHandler;
-});
-
-
-
+const statusBox = document.getElementById("status");
+const btnConnect = document.getElementById("btnConnect");
+const btnDeposit = document.getElementById("btnDeposit");
+const btnClaim = document.getElementById("btnClaim");
 
 /* =========================
    CONNECT WALLET
 ========================= */
 
-async function btnConnectHandler() {
+btnConnect.onclick = async () => {
     try {
         if (!window.ethereum) {
             statusBox.innerText = "No wallet found";
@@ -71,14 +56,13 @@ async function btnConnectHandler() {
         token = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
 
         statusBox.innerText = `Connected: ${userAddress}`;
-        await safeRefresh();
 
+        await safeRefresh();
     } catch (err) {
         console.error("Connect error:", err);
         statusBox.innerText = "Wallet connection failed";
     }
-}
-
+};
 
 /* =========================
    SAFE REFRESH
@@ -96,7 +80,6 @@ async function safeRefresh() {
 
         document.getElementById("claimed").innerText =
             ethers.formatUnits(info.claimed, 18);
-
     } catch (err) {
         console.warn("userInfo not available yet (safe to ignore)");
     }
@@ -106,7 +89,7 @@ async function safeRefresh() {
    DEPOSIT FLOW
 ========================= */
 
-async function btnDepositHandler() {
+btnDeposit.onclick = async () => {
     try {
         const input = document.getElementById("depositAmount");
         if (!input) {
@@ -132,19 +115,17 @@ async function btnDepositHandler() {
 
         statusBox.innerText = "Deposit successful";
         await safeRefresh();
-
     } catch (err) {
         console.error("Deposit failed:", err);
         statusBox.innerText = "Deposit failed";
     }
-}
-
+};
 
 /* =========================
-   CLAIM
+   CLAIM FLOW
 ========================= */
 
-async function btnClaimHandler() {
+btnClaim.onclick = async () => {
     try {
         statusBox.innerText = "Claiming rewards...";
 
@@ -153,9 +134,8 @@ async function btnClaimHandler() {
 
         statusBox.innerText = "Claim successful";
         await safeRefresh();
-
     } catch (err) {
         console.error("Claim failed:", err);
         statusBox.innerText = "Nothing to claim or no rewards funded";
     }
-}
+};
