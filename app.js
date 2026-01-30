@@ -31,7 +31,6 @@ const ERC20_ABI = [
 const statusBox = document.getElementById("status");
 const btnConnect = document.getElementById("btnConnect");
 const btnDeposit = document.getElementById("btnDeposit");
-const btnClaim = document.getElementById("btnClaim");
 
 /* =========================
    CONNECT WALLET
@@ -57,7 +56,9 @@ btnConnect.onclick = async () => {
 
         statusBox.innerText = `Connected: ${userAddress}`;
 
+        // Try refresh safely
         await safeRefresh();
+
     } catch (err) {
         console.error("Connect error:", err);
         statusBox.innerText = "Wallet connection failed";
@@ -80,6 +81,7 @@ async function safeRefresh() {
 
         document.getElementById("claimed").innerText =
             ethers.formatUnits(info.claimed, 18);
+
     } catch (err) {
         console.warn("userInfo not available yet (safe to ignore)");
     }
@@ -101,6 +103,7 @@ btnDeposit.onclick = async () => {
         if (!raw || raw <= 0) return;
 
         const amount = ethers.parseUnits(raw, 18);
+
         const allowance = await token.allowance(userAddress, CONTRACT_ADDRESS);
 
         if (allowance < amount) {
@@ -115,27 +118,9 @@ btnDeposit.onclick = async () => {
 
         statusBox.innerText = "Deposit successful";
         await safeRefresh();
+
     } catch (err) {
         console.error("Deposit failed:", err);
         statusBox.innerText = "Deposit failed";
-    }
-};
-
-/* =========================
-   CLAIM FLOW
-========================= */
-
-btnClaim.onclick = async () => {
-    try {
-        statusBox.innerText = "Claiming rewards...";
-
-        const tx = await contract.connect(signer).claim();
-        await tx.wait();
-
-        statusBox.innerText = "Claim successful";
-        await safeRefresh();
-    } catch (err) {
-        console.error("Claim failed:", err);
-        statusBox.innerText = "Nothing to claim or no rewards funded";
     }
 };
