@@ -53,9 +53,6 @@ document.addEventListener("DOMContentLoaded", () => {
 ========================= */
 
 async function btnConnectHandler() {
-    ...
-}
-
     try {
         if (!window.ethereum) {
             statusBox.innerText = "No wallet found";
@@ -74,15 +71,14 @@ async function btnConnectHandler() {
         token = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
 
         statusBox.innerText = `Connected: ${userAddress}`;
-
-        // Try refresh safely
         await safeRefresh();
 
     } catch (err) {
         console.error("Connect error:", err);
         statusBox.innerText = "Wallet connection failed";
     }
-};
+}
+
 
 /* =========================
    SAFE REFRESH
@@ -111,9 +107,6 @@ async function safeRefresh() {
 ========================= */
 
 async function btnDepositHandler() {
-    ...
-}
-
     try {
         const input = document.getElementById("depositAmount");
         if (!input) {
@@ -125,7 +118,6 @@ async function btnDepositHandler() {
         if (!raw || raw <= 0) return;
 
         const amount = ethers.parseUnits(raw, 18);
-
         const allowance = await token.allowance(userAddress, CONTRACT_ADDRESS);
 
         if (allowance < amount) {
@@ -145,16 +137,14 @@ async function btnDepositHandler() {
         console.error("Deposit failed:", err);
         statusBox.innerText = "Deposit failed";
     }
-};
+}
+
 
 /* =========================
    CLAIM
 ========================= */
 
 async function btnClaimHandler() {
-    ...
-}
-
     try {
         statusBox.innerText = "Claiming rewards...";
 
@@ -168,5 +158,4 @@ async function btnClaimHandler() {
         console.error("Claim failed:", err);
         statusBox.innerText = "Nothing to claim or no rewards funded";
     }
-};
-
+}
