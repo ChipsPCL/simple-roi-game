@@ -31,6 +31,8 @@ const ERC20_ABI = [
 const statusBox = document.getElementById("status");
 const btnConnect = document.getElementById("btnConnect");
 const btnDeposit = document.getElementById("btnDeposit");
+const btnClaim = document.getElementById("btnClaim");
+
 
 /* =========================
    CONNECT WALLET
@@ -124,3 +126,24 @@ btnDeposit.onclick = async () => {
         statusBox.innerText = "Deposit failed";
     }
 };
+
+/* =========================
+   CLAIM
+========================= */
+
+btnClaim.onclick = async () => {
+    try {
+        statusBox.innerText = "Claiming rewards...";
+
+        const tx = await contract.connect(signer).claim();
+        await tx.wait();
+
+        statusBox.innerText = "Claim successful";
+        await safeRefresh();
+
+    } catch (err) {
+        console.error("Claim failed:", err);
+        statusBox.innerText = "Nothing to claim or no rewards funded";
+    }
+};
+
