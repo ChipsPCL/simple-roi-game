@@ -48,16 +48,15 @@ async function connect() {
   stakeDecimals = await weth.decimals();
   rewardDecimals = await alt.decimals();
 
- const net = await provider.getNetwork();
-const chainId = Number(net.chainId);
+ const chainIdHex = await provider.send("eth_chainId", []);
+const chainId = parseInt(chainIdHex, 16);
+if (chainId !== 8453) {
+  alert("Please switch your wallet to Base Mainnet to use this farm.");
+  return;
+}
 
-let chainLabel = net.name;
-if (chainId === 8453) chainLabel = "Base Mainnet";
-else if (chainId === 84532) chainLabel = "Base Sepolia";
-else if (chainId === 1) chainLabel = "Ethereum Mainnet";
 
 $("status").innerText = `Connected: ${user}`;
-$("net").innerText = `Network: ${chainLabel} (${chainId})`;
 
 
   await refresh();
