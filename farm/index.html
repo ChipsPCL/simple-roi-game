@@ -5,37 +5,93 @@
   <title>Altitude Farm (Test)</title>
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.8.1/dist/ethers.umd.min.js"></script>
   <style>
-    body{
-      background:#0b0b0b;color:#fff;font-family:Arial,sans-serif;
-      max-width:520px;margin:0 auto;padding:14px;
-    }
-    h2{ margin:8px 0 12px; font-size:20px; }
-    .box{
-      background:#111;border-radius:10px;padding:12px;margin-bottom:10px;
-    }
-    .row{
-      display:flex; gap:8px; align-items:center;
-    }
-    .row > *{ flex:1; }
-    .grid{
-      display:grid; grid-template-columns:1fr 1fr; gap:8px;
-    }
-    .stat{
-      background:#0e0e0e; border-radius:8px; padding:10px;
-      display:flex; justify-content:space-between; gap:10px; font-size:14px;
-    }
-    .muted{ opacity:.75; }
-    button{
-      width:100%; padding:10px; background:#00ffcc; border:none;
-      border-radius:8px; cursor:pointer; font-weight:700;
-    }
-    input{
-      width:100%; padding:10px; border-radius:8px; border:none;
-      background:#0e0e0e; color:#fff;
-    }
-    .small{ font-size:12px; opacity:.75; margin-top:6px; }
-    .center{ text-align:center; }
-  </style>
+  :root{
+    --bg:#060a12;          /* deep navy */
+    --panel:#0b1220;       /* navy panel */
+    --panel2:#0a162a;      /* slightly lighter */
+    --border:#13233f;
+    --text:#eaf2ff;
+    --muted:#9fb2d3;
+    --accent:#2dd4ff;      /* cyan */
+    --accent2:#4f46e5;     /* indigo */
+  }
+
+  body{
+    background: radial-gradient(1200px 600px at 20% -10%, rgba(79,70,229,.25), transparent 55%),
+                radial-gradient(900px 500px at 80% 0%, rgba(45,212,255,.18), transparent 55%),
+                var(--bg);
+    color:var(--text);
+    font-family: Arial, sans-serif;
+    max-width:520px;
+    margin:0 auto;
+    padding:14px;
+  }
+
+  h2{ margin:8px 0 12px; font-size:20px; letter-spacing:.2px; }
+
+  .box{
+    background: linear-gradient(180deg, rgba(11,18,32,.95), rgba(10,22,42,.92));
+    border: 1px solid rgba(19,35,63,.85);
+    border-radius:14px;
+    padding:12px;
+    margin-bottom:10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  }
+
+  .row{ display:flex; gap:8px; align-items:center; }
+  .row > *{ flex:1; }
+
+  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+
+  .stat{
+    background: rgba(6,10,18,.55);
+    border: 1px solid rgba(19,35,63,.7);
+    border-radius:12px;
+    padding:10px;
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    font-size:14px;
+  }
+
+  .muted{ color:var(--muted); }
+
+  button{
+    width:100%;
+    padding:10px;
+    border:none;
+    border-radius:12px;
+    cursor:pointer;
+    font-weight:800;
+    color:#001018;
+    background: linear-gradient(90deg, var(--accent), rgba(79,70,229,.95));
+    box-shadow: 0 10px 22px rgba(45,212,255,.12);
+  }
+
+  button:hover{ filter: brightness(1.05); }
+
+  input{
+    width:100%;
+    padding:10px;
+    border-radius:12px;
+    border: 1px solid rgba(19,35,63,.75);
+    background: rgba(6,10,18,.55);
+    color:var(--text);
+    outline:none;
+  }
+
+  input:focus{
+    border-color: rgba(45,212,255,.65);
+    box-shadow: 0 0 0 3px rgba(45,212,255,.12);
+  }
+
+  .small{ font-size:12px; color:var(--muted); margin-top:6px; }
+  .center{ text-align:center; }
+
+  /* optional: smaller connect button height */
+  #btnConnect{ padding:10px; }
+</style>
+
 </head>
 
 <body>
