@@ -132,5 +132,4 @@ async function claim() {
 $("btnConnect").onclick = connect;
 $("btnDeposit").onclick = stake;
 $("btnWithdraw").onclick = withdraw;
-$("btnEmergency").onclick = emergency;
 $("btnClaim").onclick = claim;
