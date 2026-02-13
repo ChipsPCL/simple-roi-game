@@ -48,9 +48,17 @@ async function connect() {
   stakeDecimals = await weth.decimals();
   rewardDecimals = await alt.decimals();
 
-  const net = await provider.getNetwork();
-  $("status").innerText = `Connected: ${user}`;
-  $("net").innerText = `Network: ${net.name} (${net.chainId})`;
+ const net = await provider.getNetwork();
+const chainId = Number(net.chainId);
+
+let chainLabel = net.name;
+if (chainId === 8453) chainLabel = "Base Mainnet";
+else if (chainId === 84532) chainLabel = "Base Sepolia";
+else if (chainId === 1) chainLabel = "Ethereum Mainnet";
+
+$("status").innerText = `Connected: ${user}`;
+$("net").innerText = `Network: ${chainLabel} (${chainId})`;
+
 
   await refresh();
   setInterval(refresh, 10000);
