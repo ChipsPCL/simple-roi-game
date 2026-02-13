@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Altitude Farm (Test)</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.8.1/dist/ethers.umd.min.js"></script>
+  <style>
+    body { background:#0b0b0b; color:#fff; font-family:Arial,sans-serif; max-width:460px; margin:auto; padding:20px; }
+    .box { background:#111; border-radius:10px; padding:15px; margin-bottom:15px; text-align:center; }
+    button { width:100%; padding:10px; background:#00ffcc; border:none; border-radius:6px; cursor:pointer; font-weight:bold; margin-top:6px; }
+    input { width:100%; padding:8px; margin-bottom:10px; border-radius:6px; border:none; }
+    .small { opacity:0.8; font-size:12px; }
+  </style>
+</head>
+<body>
+
+<h2>🧪 Altitude Farm (Test)</h2>
+
+<div class="box">
+  <button id="btnConnect">Connect Wallet</button>
+  <p id="status">Not connected</p>
+  <p class="small" id="net"></p>
+</div>
+
+<div class="box">
+  <p>Stake Token (WETH): <span id="stakeBal">-</span></p>
+  <p>Your Staked: <span id="staked">-</span></p>
+  <p>Pending Rewards (ALT): <span id="pending">-</span></p>
+  <p>Total Pool Staked: <span id="totalStaked">-</span></p>
+  <p class="small">Emissions: <span id="emissions">-</span> ALT/day</p>
+</div>
+
+<div class="box">
+  <input type="number" id="depositAmount" placeholder="Stake amount (WETH)" />
+  <button id="btnDeposit">Approve & Stake</button>
+  <p class="small">Note: 3% deposit fee is taken by the contract.</p>
+</div>
+
+<div class="box">
+  <input type="number" id="withdrawAmount" placeholder="Withdraw amount (WETH)" />
+  <button id="btnWithdraw">Withdraw</button>
+  <button id="btnEmergency">Emergency Withdraw</button>
+  <p class="small">Note: 3% withdraw fee applies (even emergency).</p>
+</div>
+
+<div class="box">
+  <button id="btnClaim">Claim Rewards</button>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
