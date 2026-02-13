@@ -53,7 +53,6 @@ async function connect() {
   $("net").innerText = `Network: ${net.name} (${net.chainId})`;
 
   await refresh();
-  // auto refresh every 10s
   setInterval(refresh, 10000);
 }
 
@@ -73,7 +72,6 @@ async function refresh() {
   $("pending").innerText = ethers.formatUnits(pending, rewardDecimals);
   $("totalStaked").innerText = ethers.formatUnits(total, stakeDecimals);
 
-  // emissions per day
   const perDay = rps * 86400n;
   $("emissions").innerText = ethers.formatUnits(perDay, rewardDecimals);
 }
