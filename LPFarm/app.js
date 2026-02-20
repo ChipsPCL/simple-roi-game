@@ -178,8 +178,7 @@ async function refresh() {
 
   // Emissions/day
   const perDay = rps * SECONDS_PER_DAY;
-  if ($("emissions")) $("emissions").innerText = `${fmtNum(parseFloat(ethers.formatUnits(perDay, rewardDecimals)))} ALT/day`;
-
+  if ($("emissions")) $("emissions").innerText = fmtNum(parseFloat(ethers.formatUnits(perDay, rewardDecimals)));
   // ---------- LP price ----------
   // LP price = (DEX pool liquidity USD / divisor) / LP totalSupply
   let lpPriceUsd = null;
