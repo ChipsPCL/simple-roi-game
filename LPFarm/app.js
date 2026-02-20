@@ -176,9 +176,13 @@ async function refresh() {
   if ($("pending")) $("pending").innerText = `${fmtNum(parseFloat(ethers.formatUnits(pending, rewardDecimals)))} ALT`;
   if ($("totalStaked")) $("totalStaked").innerText = `${fmtNum(totalStakedLp)} ${STAKE_LABEL}`;
 
-  // Emissions/day
-  const perDay = rps * SECONDS_PER_DAY;
-  if $("emissions").innerText = fmtNum(parseFloat(ethers.formatUnits(perDay, rewardDecimals)));
+  // Emissions/day (HTML already shows "ALT/day")
+const perDay = rps * SECONDS_PER_DAY;
+if ($("emissions")) {
+  $("emissions").innerText = fmtNum(
+    parseFloat(ethers.formatUnits(perDay, rewardDecimals))
+  );
+}
   // ---------- LP price ----------
   // LP price = (DEX pool liquidity USD / divisor) / LP totalSupply
   let lpPriceUsd = null;
