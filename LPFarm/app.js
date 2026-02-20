@@ -9,10 +9,13 @@ const ALT  = "0x90678C02823b21772fa7e91B27EE70490257567B";
 
 // DexScreener (Base)
 const DEX_CHAIN = "base";
-// We'll use the LP pair page for:
-// - TVL via liquidity.usd
-// - ALT price via priceUsd (base token price) depending on which token is base in DexScreener
 const PAIR_ALT_WETH = "0xd57f6e7d7ec911ba8defcf93d3682bb76959e950";
+
+// UI label override (so we never show "BSWAP-LP")
+const STAKE_LABEL = "Altitude/WETH LP";
+
+// Your requested adjustment: LP price comes out ~2x, so divide liquidity by 2
+const LIQUIDITY_DIVISOR = 2;
 
 // refresh cadence
 const REFRESH_MS = 5 * 60 * 1000; // 5 minutes
@@ -35,8 +38,7 @@ const erc20ABI = [
   "function allowance(address owner, address spender) view returns (uint256)",
   "function balanceOf(address account) view returns (uint256)",
   "function decimals() view returns (uint8)",
-  "function totalSupply() view returns (uint256)",
-  "function symbol() view returns (string)"
+  "function totalSupply() view returns (uint256)"
 ];
 
 // ====== STATE ======
@@ -44,9 +46,11 @@ let provider, signer, user, farm, lp, alt;
 
 let stakeDecimals = 18;   // LP decimals (usually 18)
 let rewardDecimals = 18;  // ALT decimals (18)
-let lpSymbol = "LP";
 
-let cachedTvlUsd = null;
+// Cache:
+// - poolLiquidityUsd is DEX pool liquidity
+// - altPriceUsd is ALT spot price in USD
+let cachedPoolLiquidityUsd = null;
 let cachedAltPriceUsd = null;
 let lastPriceTs = 0;
 
@@ -78,10 +82,8 @@ async function fetchDexScreenerPair(chain, pairAddress) {
 
 /**
  * Gets:
- * - TVL USD from pair.liquidity.usd
- * - ALT price USD:
- *    DexScreener's pair.priceUsd is the USD price of the *base token* on that pair.
- *    We detect whether base token is ALT; if not, use quote token price if available.
+ * - Pool liquidity USD from pair.liquidity.usd (DEX pool TVL, NOT farm TVL)
+ * - ALT price USD (best-effort)
  */
 async function updatePrices() {
   const now = Date.now();
@@ -93,36 +95,24 @@ async function updatePrices() {
   try {
     const pair = await fetchDexScreenerPair(DEX_CHAIN, PAIR_ALT_WETH);
 
-    // TVL (DexScreener liquidity.usd)
-    cachedTvlUsd = pair?.liquidity?.usd ? parseFloat(pair.liquidity.usd) : null;
+    cachedPoolLiquidityUsd = pair?.liquidity?.usd ? parseFloat(pair.liquidity.usd) : null;
 
-    // Figure out ALT price USD
-    // pair.baseToken / pair.quoteToken include addresses
     const baseAddr = pair?.baseToken?.address?.toLowerCase?.() || "";
     const quoteAddr = pair?.quoteToken?.address?.toLowerCase?.() || "";
 
-    // pair.priceUsd = USD price of base token
-    // pair.priceNative = base token price in "native" (often ETH/WETH depending on chain)
-    // Sometimes quote token also has a derived USD; if not, we can approximate using pair.priceUsd and the price ratio,
-    // but we'll keep it simple and robust for this test:
     if (baseAddr === ALT.toLowerCase()) {
       cachedAltPriceUsd = pair?.priceUsd ? parseFloat(pair.priceUsd) : null;
     } else if (quoteAddr === ALT.toLowerCase()) {
-      // Some DexScreener responses include quoteToken.priceUsd in newer feeds; not guaranteed.
-      // Try it, else fall back to pair.priceUsd if it's still "about ALT" (not ideal but usually OK for ALT/WETH pairs).
+      // quoteToken.priceUsd isn't always present; fallback to pair.priceUsd
       const qUsd = pair?.quoteToken?.priceUsd ? parseFloat(pair.quoteToken.priceUsd) : null;
       cachedAltPriceUsd = qUsd ?? (pair?.priceUsd ? parseFloat(pair.priceUsd) : null);
     } else {
-      // ALT not detected in tokens (shouldn't happen with correct pair)
       cachedAltPriceUsd = pair?.priceUsd ? parseFloat(pair.priceUsd) : null;
     }
 
     lastPriceTs = now;
 
-    // Update UI (IDs kept from your existing layout)
-    if ($("tvlUsd")) $("tvlUsd").innerText = fmtUsd(cachedTvlUsd);
     if ($("altPrice")) $("altPrice").innerText = fmtUsd(cachedAltPriceUsd);
-
     if (priceEl) priceEl.innerText = `Prices updated: ${new Date().toLocaleTimeString()}`;
   } catch (e) {
     console.error(e);
@@ -145,14 +135,13 @@ async function connect() {
   lp   = new ethers.Contract(LP_TOKEN, erc20ABI, signer);
   alt  = new ethers.Contract(ALT, erc20ABI, signer);
 
-  // decimals
   stakeDecimals = await lp.decimals();
   rewardDecimals = await alt.decimals();
 
-  // nice label if available
-  try { lpSymbol = await lp.symbol(); } catch { lpSymbol = "LP"; }
-
   $("status").innerText = `Connected: ${user}`;
+
+  // Optional: if you have an element for stake label, set it
+  if ($("stakeLabel")) $("stakeLabel").innerText = STAKE_LABEL;
 
   await updatePrices();
   await refresh();
@@ -167,7 +156,7 @@ async function refresh() {
   if (!farm || !user) return;
 
   // Read farm + wallet balances
-  const [u, pending, totalStaked, rps, lpBal, lpSupply] = await Promise.all([
+  const [u, pending, totalStakedRaw, rps, lpBalRaw, lpSupplyRaw] = await Promise.all([
     farm.users(user),
     farm.pendingRewards(user),
     farm.totalStaked(),
@@ -176,47 +165,58 @@ async function refresh() {
     lp.totalSupply(),
   ]);
 
+  const lpBal = parseFloat(ethers.formatUnits(lpBalRaw, stakeDecimals));
+  const yourStakedLp = parseFloat(ethers.formatUnits(u.amount, stakeDecimals));
+  const totalStakedLp = parseFloat(ethers.formatUnits(totalStakedRaw, stakeDecimals));
+  const lpSupply = parseFloat(ethers.formatUnits(lpSupplyRaw, stakeDecimals));
+
   // UI: balances
-  if ($("stakeBal")) $("stakeBal").innerText = `${fmtNum(parseFloat(ethers.formatUnits(lpBal, stakeDecimals)))} ${lpSymbol}`;
-  if ($("staked")) $("staked").innerText = `${fmtNum(parseFloat(ethers.formatUnits(u.amount, stakeDecimals)))} ${lpSymbol}`;
+  if ($("stakeBal")) $("stakeBal").innerText = `${fmtNum(lpBal)} ${STAKE_LABEL}`;
+  if ($("staked")) $("staked").innerText = `${fmtNum(yourStakedLp)} ${STAKE_LABEL}`;
   if ($("pending")) $("pending").innerText = `${fmtNum(parseFloat(ethers.formatUnits(pending, rewardDecimals)))} ALT`;
-  if ($("totalStaked")) $("totalStaked").innerText = `${fmtNum(parseFloat(ethers.formatUnits(totalStaked, stakeDecimals)))} ${lpSymbol}`;
+  if ($("totalStaked")) $("totalStaked").innerText = `${fmtNum(totalStakedLp)} ${STAKE_LABEL}`;
 
   // Emissions/day
   const perDay = rps * SECONDS_PER_DAY;
   if ($("emissions")) $("emissions").innerText = `${fmtNum(parseFloat(ethers.formatUnits(perDay, rewardDecimals)))} ALT/day`;
 
-  // LP Price + Your LP USD value
-  // lpPriceUsd = tvlUsd / totalSupplyTokens
-  // tvl for *pool*; totalSupply is pool LP supply; that gives $/LP
+  // ---------- LP price ----------
+  // LP price = (DEX pool liquidity USD / divisor) / LP totalSupply
   let lpPriceUsd = null;
-  let yourLpUsd = null;
+  if (cachedPoolLiquidityUsd && lpSupply > 0) {
+    lpPriceUsd = (cachedPoolLiquidityUsd / LIQUIDITY_DIVISOR) / lpSupply;
+  }
+  if ($("lpPriceUsd")) $("lpPriceUsd").innerText = fmtUsd(lpPriceUsd);
 
-  try {
-    const supplyTokens = parseFloat(ethers.formatUnits(lpSupply, stakeDecimals));
-    if (cachedTvlUsd && supplyTokens > 0) {
-      lpPriceUsd = cachedTvlUsd / supplyTokens;
-
-      const yourLpTokens = parseFloat(ethers.formatUnits(u.amount, stakeDecimals));
-      yourLpUsd = yourLpTokens * lpPriceUsd;
-    }
-  } catch (e) {
-    console.error(e);
+  // ---------- FARM TVL ----------
+  // Farm TVL = farm.totalStaked() (LP tokens) * LP price USD
+  let farmTvlUsd = null;
+  if (lpPriceUsd !== null) {
+    farmTvlUsd = totalStakedLp * lpPriceUsd;
   }
 
-  // If you add these IDs in HTML, they’ll display (optional but recommended)
-  if ($("lpPriceUsd")) $("lpPriceUsd").innerText = fmtUsd(lpPriceUsd);
-  if ($("yourValueUsd")) $("yourValueUsd").innerText = fmtUsd(yourLpUsd);
+  // Show 0 when empty (instead of "-")
+  if ($("tvlUsd")) {
+    if (farmTvlUsd === null) $("tvlUsd").innerText = "-";
+    else $("tvlUsd").innerText = fmtUsd(farmTvlUsd);
+  }
 
-  // APR estimate
-  // APR = (yearlyRewardsUSD / TVL_USD) * 100
+  // Optional: user's USD value
+  let yourValueUsd = null;
+  if (lpPriceUsd !== null) {
+    yourValueUsd = yourStakedLp * lpPriceUsd;
+  }
+  if ($("yourValueUsd")) $("yourValueUsd").innerText = fmtUsd(yourValueUsd);
+
+  // ---------- APR ----------
+  // APR = yearlyRewardsUsd / farmTVLUsd
   try {
-    if (cachedTvlUsd && cachedAltPriceUsd && totalStaked > 0n) {
+    if (cachedAltPriceUsd && farmTvlUsd && farmTvlUsd > 0 && totalStakedRaw > 0n) {
       const yearlyRewardWei = rps * SECONDS_PER_YEAR;
       const yearlyRewardTokens = parseFloat(ethers.formatUnits(yearlyRewardWei, rewardDecimals));
       const yearlyRewardsUsd = yearlyRewardTokens * cachedAltPriceUsd;
 
-      const apr = cachedTvlUsd > 0 ? (yearlyRewardsUsd / cachedTvlUsd) * 100 : null;
+      const apr = (yearlyRewardsUsd / farmTvlUsd) * 100;
       if ($("apr")) $("apr").innerText = fmtPct(apr);
     } else {
       if ($("apr")) $("apr").innerText = "-";
