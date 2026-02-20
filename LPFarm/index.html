@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Altitude LP Farm (Test)</title>
+  <title>Altitude/WETH LP Farm (Test)</title>
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.8.1/dist/ethers.umd.min.js"></script>
 
   <style>
@@ -28,7 +28,7 @@
       padding:14px;
     }
 
-    h2{ margin:8px 0 12px; font-size:20px; letter-spacing:.2px; }
+    h2{ margin:8px 0 6px; font-size:20px; letter-spacing:.2px; }
 
     .box{
       background: linear-gradient(180deg, rgba(11,18,32,.95), rgba(10,22,42,.92));
@@ -90,7 +90,8 @@
 </head>
 
 <body>
-  <h2>🧪 Altitude LP Farm (Test)</h2>
+  <h2>🧪 Altitude/WETH LP Farm (Test)</h2>
+  <div class="small muted" id="stakeLabel">Altitude/WETH LP</div>
 
   <div class="box center">
     <button id="btnConnect">Connect Wallet</button>
@@ -103,7 +104,7 @@
       <div class="stat"><span class="muted">Your Staked</span><span id="staked">-</span></div>
 
       <div class="stat"><span class="muted">Pending ALT</span><span id="pending">-</span></div>
-      <div class="stat"><span class="muted">Pool Staked</span><span id="totalStaked">-</span></div>
+      <div class="stat"><span class="muted">Farm Staked</span><span id="totalStaked">-</span></div>
 
       <div class="stat"><span class="muted">LP Price</span><span id="lpPriceUsd">-</span></div>
       <div class="stat"><span class="muted">Your Value (USD)</span><span id="yourValueUsd">-</span></div>
@@ -122,7 +123,7 @@
 
   <div class="box">
     <div class="row">
-      <input type="number" id="depositAmount" placeholder="Stake LP" />
+      <input type="number" id="depositAmount" placeholder="Stake Altitude/WETH LP" />
       <button id="btnDeposit">Stake</button>
     </div>
     <div class="small">3% deposit fee applies.</div>
@@ -130,7 +131,7 @@
 
   <div class="box">
     <div class="row">
-      <input type="number" id="withdrawAmount" placeholder="Withdraw LP" />
+      <input type="number" id="withdrawAmount" placeholder="Withdraw Altitude/WETH LP" />
       <button id="btnWithdraw">Withdraw</button>
     </div>
     <div class="small">3% withdraw fee applies.</div>
@@ -141,6 +142,6 @@
   </div>
 
   <!-- Cache-bust if needed: bump v= -->
-  <script src="app.js?v=1"></script>
+  <script src="app.js?v=2"></script>
 </body>
 </html>
