@@ -14,8 +14,8 @@ const PAIR_ALT_WETH = "0xd57f6e7d7ec911ba8defcf93d3682bb76959e950";
 // UI label override (so we never show "BSWAP-LP")
 const STAKE_LABEL = "Altitude/WETH LP";
 
-// Your requested adjustment: LP price comes out ~2x, so divide liquidity by 2
-const LIQUIDITY_DIVISOR = 2;
+// LP pricing
+const LIQUIDITY_DIVISOR = 1;
 
 // refresh cadence
 const REFRESH_MS = 5 * 60 * 1000; // 5 minutes
