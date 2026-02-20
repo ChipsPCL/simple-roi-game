@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Altitude LP Farm (Test)</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.8.1/dist/ethers.umd.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#060a12;
+      --panel:#0b1220;
+      --panel2:#0a162a;
+      --border:#13233f;
+      --text:#eaf2ff;
+      --muted:#9fb2d3;
+      --accent:#2dd4ff;
+      --accent2:#4f46e5;
+    }
+
+    body{
+      background: radial-gradient(1200px 600px at 20% -10%, rgba(79,70,229,.25), transparent 55%),
+                  radial-gradient(900px 500px at 80% 0%, rgba(45,212,255,.18), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+      font-family: Arial, sans-serif;
+      max-width:520px;
+      margin:0 auto;
+      padding:14px;
+    }
+
+    h2{ margin:8px 0 12px; font-size:20px; letter-spacing:.2px; }
+
+    .box{
+      background: linear-gradient(180deg, rgba(11,18,32,.95), rgba(10,22,42,.92));
+      border: 1px solid rgba(19,35,63,.85);
+      border-radius:14px;
+      padding:12px;
+      margin-bottom:10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+
+    .row{ display:flex; gap:8px; align-items:center; }
+    .row > *{ flex:1; }
+
+    .grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+
+    .stat{
+      background: rgba(6,10,18,.55);
+      border: 1px solid rgba(19,35,63,.7);
+      border-radius:12px;
+      padding:10px;
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      font-size:14px;
+    }
+
+    .muted{ color:var(--muted); }
+
+    button{
+      width:100%;
+      padding:10px;
+      border:none;
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:800;
+      color:#001018;
+      background: linear-gradient(90deg, var(--accent), rgba(79,70,229,.95));
+      box-shadow: 0 10px 22px rgba(45,212,255,.12);
+    }
+    button:hover{ filter: brightness(1.05); }
+
+    input{
+      width:100%;
+      padding:10px;
+      border-radius:12px;
+      border: 1px solid rgba(19,35,63,.75);
+      background: rgba(6,10,18,.55);
+      color:var(--text);
+      outline:none;
+    }
+    input:focus{
+      border-color: rgba(45,212,255,.65);
+      box-shadow: 0 0 0 3px rgba(45,212,255,.12);
+    }
+
+    .small{ font-size:12px; color:var(--muted); margin-top:6px; }
+    .center{ text-align:center; }
+  </style>
+</head>
+
+<body>
+  <h2>🧪 Altitude LP Farm (Test)</h2>
+
+  <div class="box center">
+    <button id="btnConnect">Connect Wallet</button>
+    <div class="small" id="status">Not connected</div>
+  </div>
+
+  <div class="box">
+    <div class="grid">
+      <div class="stat"><span class="muted">LP Balance</span><span id="stakeBal">-</span></div>
+      <div class="stat"><span class="muted">Your Staked</span><span id="staked">-</span></div>
+
+      <div class="stat"><span class="muted">Pending ALT</span><span id="pending">-</span></div>
+      <div class="stat"><span class="muted">Pool Staked</span><span id="totalStaked">-</span></div>
+
+      <div class="stat"><span class="muted">LP Price</span><span id="lpPriceUsd">-</span></div>
+      <div class="stat"><span class="muted">Your Value (USD)</span><span id="yourValueUsd">-</span></div>
+
+      <div class="stat"><span class="muted">APR (est)</span><span id="apr">-</span></div>
+      <div class="stat"><span class="muted">TVL (USD)</span><span id="tvlUsd">-</span></div>
+    </div>
+
+    <div class="small">
+      Emissions: <span id="emissions">-</span> ALT/day ·
+      ALT: <span id="altPrice">-</span>
+    </div>
+
+    <div class="small" id="priceStatus"></div>
+  </div>
+
+  <div class="box">
+    <div class="row">
+      <input type="number" id="depositAmount" placeholder="Stake LP" />
+      <button id="btnDeposit">Stake</button>
+    </div>
+    <div class="small">3% deposit fee applies.</div>
+  </div>
+
+  <div class="box">
+    <div class="row">
+      <input type="number" id="withdrawAmount" placeholder="Withdraw LP" />
+      <button id="btnWithdraw">Withdraw</button>
+    </div>
+    <div class="small">3% withdraw fee applies.</div>
+  </div>
+
+  <div class="box">
+    <button id="btnClaim">Claim Rewards</button>
+  </div>
+
+  <!-- Cache-bust if needed: bump v= -->
+  <script src="app.js?v=1"></script>
+</body>
+</html>
