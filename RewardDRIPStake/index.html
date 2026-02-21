@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Altitude USDC Drip Farm</title>
+  <title>The 1% Game</title>
 
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.8.1/dist/ethers.umd.min.js"></script>
 
@@ -11,12 +11,10 @@
       background: #0b0b0b;
       color: #fff;
       font-family: Arial, sans-serif;
-      max-width: 520px;
+      max-width: 420px;
       margin: auto;
       padding: 20px;
     }
-    h2 { margin-top: 0; }
-    .sub { color: #bdbdbd; font-size: 12px; margin-top: -8px; }
 
     .box {
       background: #111;
@@ -25,18 +23,6 @@
       margin-bottom: 15px;
       text-align: center;
     }
-
-    .row {
-      display: flex;
-      gap: 10px;
-      justify-content: space-between;
-      text-align: left;
-      flex-wrap: wrap;
-    }
-    .row p { margin: 6px 0; flex: 1 1 45%; }
-
-    .muted { color: #bdbdbd; font-size: 12px; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
 
     button {
       width: 100%;
@@ -51,90 +37,71 @@
 
     input {
       width: 100%;
-      padding: 10px;
+      padding: 8px;
       margin-bottom: 10px;
       border-radius: 6px;
       border: none;
     }
 
-    .mini {
-      font-size: 12px;
+    .muted {
       color: #bdbdbd;
-      margin-top: 10px;
-      line-height: 1.4;
+      font-size: 12px;
+      margin-top: 8px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 14px;
+      text-align: left;
+      margin-top: 8px;
+    }
+
+    .grid p {
+      margin: 6px 0;
+    }
+
+    .full {
+      grid-column: 1 / -1;
+      text-align: left;
     }
   </style>
 </head>
 
 <body>
 
-  <h2>🔥 Altitude → USDC Drip Farm</h2>
-  <div class="sub">Stake ALT, earn USDC. Rewards drip from the USDC reserve.</div>
+  <h2>🔥 The 1% Game</h2>
 
   <div class="box">
     <button id="btnConnect">Connect Wallet</button>
     <p id="status">Not connected</p>
-    <p class="mini">
-      Farm: <span class="mono">0xC2A0E92F1fc5c0191ef9787c7eB53cbB5D08d6E6</span><br/>
-      Stake (ALT): <span class="mono">0x90678C02823b21772fa7e91B27EE70490257567B</span><br/>
-      Reward (USDC): <span class="mono">0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913</span>
-    </p>
-    <p class="muted" id="priceStatus">Prices not loaded</p>
   </div>
 
   <div class="box">
-    <div class="row">
-      <p>ALT Price: <span id="altPrice">-</span></p>
-      <p>TVL (USD): <span id="tvlUsd">-</span></p>
-      <p>APR (est.): <span id="apr">-</span></p>
-      <p>Daily Drip (USDC): <span id="emissions">-</span></p>
-    </div>
-  </div>
-
-  <div class="box">
-    <h3 style="margin:0 0 10px 0;">Your Wallet</h3>
-    <div class="row">
-      <p>ALT Balance: <span id="stakeBal">0</span></p>
-      <p>Staked ALT: <span id="staked">0</span></p>
-      <p>Pending USDC: <span id="pending">0</span></p>
-      <p>Total Staked ALT: <span id="totalStaked">0</span></p>
+    <div class="grid">
+      <p class="full">Staked: <span id="staked">0</span> ALT</p>
+      <p class="full">Pending: <span id="pending">0</span> USDC</p>
+      <p class="full">Reserve: <span id="reserve">0</span> USDC</p>
+      <p class="full">APR: <span id="apr">-</span></p>
     </div>
 
-    <button id="btnClaim">Claim USDC</button>
+    <!-- Optional: keep this button small/simple but VERY useful -->
+    <button id="btnUpdate">Update Pool</button>
+    <p class="muted" id="lastUpdate">-</p>
   </div>
 
   <div class="box">
-    <h3 style="margin:0 0 10px 0;">Pool Status</h3>
-    <div class="row">
-      <p>USDC Balance: <span id="rewardBalance">-</span></p>
-      <p>Reserve Balance: <span id="reserveBalance">-</span></p>
-      <p>Unclaimed Allocated: <span id="unclaimedAllocated">-</span></p>
-    </div>
-    <p class="muted">
-      “USDC Balance” is actual USDC held by the contract.<br/>
-      “Reserve” is the unallocated amount used for the drip model.
-    </p>
-  </div>
-
-  <div class="box">
-    <h3 style="margin:0 0 10px 0;">Stake / Withdraw</h3>
-
-    <input type="number" id="depositAmount" placeholder="Stake ALT amount" />
+    <input type="number" id="depositAmount" placeholder="Stake amount (ALT)" />
     <button id="btnDeposit">Approve & Stake</button>
-    <p class="muted">Deposit fee: 1% (taken from received ALT)</p>
-
-    <hr style="border:none;height:1px;background:#222;margin:14px 0;" />
-
-    <input type="number" id="withdrawAmount" placeholder="Withdraw ALT amount" />
-    <button id="btnWithdraw">Withdraw</button>
-    <p class="muted">Withdraw fee: 2%</p>
   </div>
 
   <div class="box">
-    <p class="mini">
-      Note: The pool updates on user actions (stake/withdraw/claim). If nobody interacts for a while,
-      values may look “stale” until the next transaction triggers an update.
-    </p>
+    <input type="number" id="withdrawAmount" placeholder="Withdraw amount (ALT)" />
+    <button id="btnWithdraw">Withdraw</button>
+  </div>
+
+  <div class="box">
+    <button id="btnClaim">Claim USDC</button>
   </div>
 
   <script src="app.js"></script>
