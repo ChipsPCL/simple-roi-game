@@ -1,20 +1,15 @@
-// app.js — RewardStakerUSDCDrip (ALT stake -> USDC rewards)
-// UI targets (from your simplified HTML):
-// status, staked, pending, reserve, apr, lastUpdate
-// buttons: btnConnect, btnDeposit, btnWithdraw, btnClaim, btnUpdate
-// inputs: depositAmount, withdrawAmount
+// app.js — RewardStakerUSDCDrip UI (ALT stake -> USDC rewards)
 
 // ====== CONFIG ======
 const FARM_ADDRESS = "0xC2A0E92F1fc5c0191ef9787c7eB53cbB5D08d6E6";
+const ALT  = "0x90678C02823b21772fa7e91B27EE70490257567B";
+const USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 
-const ALT  = "0x90678C02823b21772fa7e91B27EE70490257567B"; // stake token
-const USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"; // reward token
-
-// DexScreener (Base) — ALT/WETH pair (DexScreener returns priceUsd for the base token)
+// DexScreener (Base): ALT/WETH pair returns priceUsd
 const DEX_CHAIN = "base";
 const PAIR_ALT_WETH = "0xd57f6e7d7ec911ba8defcf93d3682bb76959e950";
 
-// Refresh cadence
+// refresh cadence
 const REFRESH_MS = 5 * 60 * 1000; // 5 minutes
 
 // ====== ABIs ======
@@ -79,7 +74,7 @@ async function fetchDexScreenerPair(chain, pairAddress) {
 
 async function updateAltPrice() {
   const now = Date.now();
-  if (now - lastPriceTs < 10_000) return; // anti-spam
+  if (now - lastPriceTs < 10_000) return;
 
   try {
     const altPair = await fetchDexScreenerPair(DEX_CHAIN, PAIR_ALT_WETH);
@@ -87,7 +82,6 @@ async function updateAltPrice() {
     lastPriceTs = now;
   } catch (e) {
     console.error("Price fetch failed:", e);
-    // keep previous cached price if available
   }
 }
 
@@ -123,13 +117,7 @@ async function connect() {
 async function refresh() {
   if (!farm || !user) return;
 
-  const [
-    u,
-    pending,
-    totalStaked,
-    reserve,
-    dripPerDay
-  ] = await Promise.all([
+  const [u, pending, totalStaked, reserve, dripPerDay] = await Promise.all([
     farm.users(user),
     farm.pendingRewards(user),
     farm.totalStaked(),
@@ -137,12 +125,12 @@ async function refresh() {
     farm.dailyDripEstimate()
   ]);
 
-  safeSetText("staked", fmtUnitsClamped(u.amount, stakeDecimals, 6));
+  safeSetText("deposited", fmtUnitsClamped(u.amount, stakeDecimals, 6));
   safeSetText("pending", fmtUnitsClamped(pending, rewardDecimals, 6));
   safeSetText("reserve", fmtUnitsClamped(reserve, rewardDecimals, 6));
 
   // APR estimate:
-  // yearlyRewardsUSD = (dailyDripEstimate * 365) * $1
+  // yearlyRewardsUSD = dailyDripEstimate * 365 (USDC ~= $1)
   // TVL_USD = totalStakedALT * altPriceUsd
   try {
     if (cachedAltPriceUsd && totalStaked > 0n) {
@@ -150,7 +138,7 @@ async function refresh() {
       const tvlUsd = tvlAlt * cachedAltPriceUsd;
 
       const dailyUsdc = parseFloat(ethers.formatUnits(dripPerDay, rewardDecimals));
-      const yearlyRewardsUsd = dailyUsdc * 365; // USDC ~ $1
+      const yearlyRewardsUsd = dailyUsdc * 365;
 
       const apr = tvlUsd > 0 ? (yearlyRewardsUsd / tvlUsd) * 100 : null;
       safeSetText("apr", fmtPct(apr));
@@ -175,7 +163,7 @@ async function approveIfNeeded(amountWei) {
 
 async function stake() {
   const val = $("depositAmount")?.value;
-  if (!val || Number(val) <= 0) return alert("Enter stake amount");
+  if (!val || Number(val) <= 0) return alert("Enter deposit amount");
 
   const amountWei = ethers.parseUnits(val, stakeDecimals);
 
@@ -184,7 +172,7 @@ async function stake() {
   const tx = await farm.deposit(amountWei);
   await tx.wait();
 
-  if ($("depositAmount")) $("depositAmount").value = "";
+  $("depositAmount").value = "";
   await refresh();
 }
 
@@ -197,7 +185,7 @@ async function withdraw() {
   const tx = await farm.withdraw(amountWei);
   await tx.wait();
 
-  if ($("withdrawAmount")) $("withdrawAmount").value = "";
+  $("withdrawAmount").value = "";
   await refresh();
 }
 
@@ -207,6 +195,7 @@ async function claim() {
   await refresh();
 }
 
+// Optional: manual pool update so UI “moves”
 async function updatePoolNow() {
   if (!farm) return;
   try {
