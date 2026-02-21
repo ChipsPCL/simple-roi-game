@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>The 1% Game</title>
+  <title>Altitude USDC Drip Farm</title>
 
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.8.1/dist/ethers.umd.min.js"></script>
 
@@ -32,7 +32,6 @@
       border-radius: 6px;
       cursor: pointer;
       font-weight: bold;
-      margin-top: 8px;
     }
 
     input {
@@ -44,64 +43,47 @@
     }
 
     .muted {
-      color: #bdbdbd;
+      color: #9aa0a6;
       font-size: 12px;
       margin-top: 8px;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px 14px;
-      text-align: left;
-      margin-top: 8px;
-    }
-
-    .grid p {
-      margin: 6px 0;
-    }
-
-    .full {
-      grid-column: 1 / -1;
-      text-align: left;
     }
   </style>
 </head>
 
 <body>
 
-  <h2>🔥 The 1% Game</h2>
+  <h2>🏔️ Altitude USDC Drip Farm</h2>
 
   <div class="box">
     <button id="btnConnect">Connect Wallet</button>
     <p id="status">Not connected</p>
+    <p class="muted" id="lastUpdate">—</p>
   </div>
 
   <div class="box">
-    <div class="grid">
-      <p class="full">Staked: <span id="staked">0</span> ALT</p>
-      <p class="full">Pending: <span id="pending">0</span> USDC</p>
-      <p class="full">Reserve: <span id="reserve">0</span> USDC</p>
-      <p class="full">APR: <span id="apr">-</span></p>
-    </div>
-
-    <!-- Optional: keep this button small/simple but VERY useful -->
-    <button id="btnUpdate">Update Pool</button>
-    <p class="muted" id="lastUpdate">-</p>
+    <p>Deposited (ALT): <span id="deposited">0</span></p>
+    <p>Pending (USDC): <span id="pending">0</span></p>
+    <p>Reserve (USDC): <span id="reserve">0</span></p>
+    <p>APR (est.): <span id="apr">-</span></p>
   </div>
 
   <div class="box">
-    <input type="number" id="depositAmount" placeholder="Stake amount (ALT)" />
-    <button id="btnDeposit">Approve & Stake</button>
+    <input type="number" id="depositAmount" placeholder="Deposit ALT amount" />
+    <button id="btnDeposit">Approve & Deposit</button>
   </div>
 
   <div class="box">
-    <input type="number" id="withdrawAmount" placeholder="Withdraw amount (ALT)" />
+    <input type="number" id="withdrawAmount" placeholder="Withdraw ALT amount" />
     <button id="btnWithdraw">Withdraw</button>
   </div>
 
   <div class="box">
     <button id="btnClaim">Claim USDC</button>
+  </div>
+
+  <div class="box">
+    <button id="btnUpdate">Update Pool</button>
+    <p class="muted">Optional: forces on-chain update so rewards “move” even if nobody interacts.</p>
   </div>
 
   <script src="app.js"></script>
