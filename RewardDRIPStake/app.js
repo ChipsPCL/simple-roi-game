@@ -290,5 +290,5 @@ document.addEventListener("DOMContentLoaded", () => {
   if (btnDeposit) btnDeposit.onclick = stake;
   if (btnWithdraw) btnWithdraw.onclick = withdraw;
   if (btnClaim) btnClaim.onclick = claim;
-  if (btnUpdatePool) btnUpdate.onclick = updatePool;
+  if (btnUpdate) btnUpdate.onclick = updatePool;
 });
