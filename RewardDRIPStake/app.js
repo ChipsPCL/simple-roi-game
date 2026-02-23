@@ -284,11 +284,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnDeposit = $("btnDeposit");
   const btnWithdraw = $("btnWithdraw");
   const btnClaim = $("btnClaim");
-  const btnUpdatePool = $("btnUpdatePool");
+  const btnUpdate = $("btnUpdate");
 
   if (btnConnect) btnConnect.onclick = connect;
   if (btnDeposit) btnDeposit.onclick = stake;
   if (btnWithdraw) btnWithdraw.onclick = withdraw;
   if (btnClaim) btnClaim.onclick = claim;
-  if (btnUpdatePool) btnUpdatePool.onclick = updatePool;
+  if (btnUpdatePool) btnUpdate.onclick = updatePool;
 });
