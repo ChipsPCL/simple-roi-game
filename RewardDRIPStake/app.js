@@ -1,28 +1,35 @@
-// app.js — RewardStakerUSDCDrip UI (ALT stake -> USDC rewards)
+// app.js — RewardStakerUSDCDrip (ALT stake -> USDC rewards) — DEPLOYED VERSION (BaseScan)
 
 // ====== CONFIG ======
 const FARM_ADDRESS = "0xC2A0E92F1fc5c0191ef9787c7eB53cbB5D08d6E6";
-const ALT  = "0x90678C02823b21772fa7e91B27EE70490257567B";
-const USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 
-// DexScreener (Base): ALT/WETH pair returns priceUsd
+const ALT  = "0x90678C02823b21772fa7e91B27EE70490257567B"; // stake token
+const USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"; // reward token
+
+// DexScreener (Base) — ALT/WETH pair (gives priceUsd directly)
 const DEX_CHAIN = "base";
 const PAIR_ALT_WETH = "0xd57f6e7d7ec911ba8defcf93d3682bb76959e950";
 
 // refresh cadence
-const REFRESH_MS = 5 * 60 * 1000; // 5 minutes
+const REFRESH_MS = 60 * 1000; // 1 minute feels better UX than 5m for drip displays
 
 // ====== ABIs ======
+// RewardStakerUSDCDrip ABI (ONLY functions that exist in your deployed contract)
 const farmABI = [
   "function deposit(uint256 amount)",
   "function withdraw(uint256 amount)",
   "function claim()",
   "function updatePool()",
-  "function pendingRewards(address) view returns (uint256)",
+  "function pendingRewards(address userAddr) view returns (uint256)",
   "function totalStaked() view returns (uint256)",
   "function users(address) view returns (uint256 amount, uint256 rewardDebt)",
-  "function reserveBalance() view returns (uint256)",
-  "function dailyDripEstimate() view returns (uint256)"
+
+  // helpers from deployed contract
+  "function rewardBalance() view returns (uint256)",
+  "function allocatedBalance() view returns (uint256)",
+  "function availableRewards() view returns (uint256)",
+  "function dailyDripEstimate() view returns (uint256)",
+  "function yearlyDripEstimate() view returns (uint256)"
 ];
 
 const erc20ABI = [
@@ -47,19 +54,33 @@ function safeSetText(id, text) {
   if (el) el.innerText = text;
 }
 
+function fmtUsd(n) {
+  if (n === null || Number.isNaN(n) || !Number.isFinite(n)) return "-";
+  return "$" + n.toLocaleString(undefined, { maximumFractionDigits: 6 });
+}
+
 function fmtPct(n) {
   if (n === null || Number.isNaN(n) || !Number.isFinite(n)) return "-";
   return n.toFixed(2) + "%";
 }
 
+// Format on-chain units, clamp display decimals for nicer UI
 function fmtUnitsClamped(valueWei, tokenDecimals, displayDecimals = 6) {
   try {
-    const s = ethers.formatUnits(valueWei, tokenDecimals);
+    const s = ethers.formatUnits(valueWei, tokenDecimals); // string
     if (!s.includes(".")) return s;
     const [a, b] = s.split(".");
     return `${a}.${b.slice(0, displayDecimals)}`;
   } catch {
-    return "0";
+    return "-";
+  }
+}
+
+function setButtonsEnabled(enabled) {
+  const ids = ["btnDeposit", "btnWithdraw", "btnClaim", "btnUpdatePool"];
+  for (const id of ids) {
+    const el = $(id);
+    if (el) el.disabled = !enabled;
   }
 }
 
@@ -72,98 +93,134 @@ async function fetchDexScreenerPair(chain, pairAddress) {
   return data.pair;
 }
 
-async function updateAltPrice() {
+async function updatePrices() {
   const now = Date.now();
   if (now - lastPriceTs < 10_000) return;
+
+  safeSetText("priceStatus", "Updating prices...");
 
   try {
     const altPair = await fetchDexScreenerPair(DEX_CHAIN, PAIR_ALT_WETH);
     cachedAltPriceUsd = parseFloat(altPair.priceUsd);
+
     lastPriceTs = now;
+
+    safeSetText("altPrice", fmtUsd(cachedAltPriceUsd));
+    safeSetText("priceStatus", `Prices updated: ${new Date().toLocaleTimeString()}`);
   } catch (e) {
-    console.error("Price fetch failed:", e);
+    console.error(e);
+    safeSetText("priceStatus", "Price update failed (will retry next refresh)");
   }
 }
 
 async function connect() {
-  if (!window.ethereum) {
-    alert("No wallet found. Install MetaMask / Coinbase Wallet.");
-    return;
-  }
+  try {
+    if (!window.ethereum) {
+      alert("No wallet found. Install MetaMask / Coinbase Wallet.");
+      return;
+    }
 
-  provider = new ethers.BrowserProvider(window.ethereum);
-  await provider.send("eth_requestAccounts", []);
-  signer = await provider.getSigner();
-  user = await signer.getAddress();
+    provider = new ethers.BrowserProvider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    signer = await provider.getSigner();
+    user = await signer.getAddress();
 
-  farm = new ethers.Contract(FARM_ADDRESS, farmABI, signer);
-  alt  = new ethers.Contract(ALT, erc20ABI, signer);
-  usdc = new ethers.Contract(USDC, erc20ABI, signer);
+    farm = new ethers.Contract(FARM_ADDRESS, farmABI, signer);
+    alt  = new ethers.Contract(ALT, erc20ABI, signer);
+    usdc = new ethers.Contract(USDC, erc20ABI, signer);
 
-  stakeDecimals = await alt.decimals();
-  rewardDecimals = await usdc.decimals(); // USDC = 6
+    stakeDecimals = await alt.decimals();
+    rewardDecimals = await usdc.decimals(); // should be 6
 
-  safeSetText("status", `Connected: ${user}`);
+    safeSetText("status", `Connected: ${user}`);
+    setButtonsEnabled(true);
 
-  await updateAltPrice();
-  await refresh();
-
-  setInterval(async () => {
-    await updateAltPrice();
+    await updatePrices();
     await refresh();
-  }, REFRESH_MS);
+
+    setInterval(async () => {
+      await updatePrices();
+      await refresh();
+    }, REFRESH_MS);
+  } catch (e) {
+    console.error(e);
+    alert("Connect failed. Check console.");
+  }
 }
 
 async function refresh() {
   if (!farm || !user) return;
 
-  const [u, pending, totalStaked, reserve, dripPerDay] = await Promise.all([
+  // Pull everything we show in UI
+  const [
+    u,
+    pending,
+    total,
+    altBal,
+    rewardBal,
+    allocatedBal,
+    availableBal,
+    dripPerDay,
+    dripPerYear
+  ] = await Promise.all([
     farm.users(user),
     farm.pendingRewards(user),
     farm.totalStaked(),
-    farm.reserveBalance(),
-    farm.dailyDripEstimate()
+    alt.balanceOf(user),
+    farm.rewardBalance(),
+    farm.allocatedBalance(),
+    farm.availableRewards(),
+    farm.dailyDripEstimate(),
+    farm.yearlyDripEstimate()
   ]);
 
-  safeSetText("deposited", fmtUnitsClamped(u.amount, stakeDecimals, 6));
+  // Wallet + Staking
+  safeSetText("stakeBal", fmtUnitsClamped(altBal, stakeDecimals, 6));
+  safeSetText("staked", fmtUnitsClamped(u.amount, stakeDecimals, 6));
   safeSetText("pending", fmtUnitsClamped(pending, rewardDecimals, 6));
-  safeSetText("reserve", fmtUnitsClamped(reserve, rewardDecimals, 6));
+  safeSetText("totalStaked", fmtUnitsClamped(total, stakeDecimals, 6));
 
-  // APR estimate:
-  // yearlyRewardsUSD = dailyDripEstimate * 365 (USDC ~= $1)
-  // TVL_USD = totalStakedALT * altPriceUsd
+  // Rewards accounting (THIS is the key part for your contract)
+  safeSetText("rewardBalance", fmtUnitsClamped(rewardBal, rewardDecimals, 6));     // total USDC held
+  safeSetText("allocatedBalance", fmtUnitsClamped(allocatedBal, rewardDecimals, 6)); // allocated but unpaid
+  safeSetText("reserveBalance", fmtUnitsClamped(availableBal, rewardDecimals, 6)); // available for NEW drip (bal - allocated)
+
+  // Emissions/day (USDC)
+  safeSetText("emissions", fmtUnitsClamped(dripPerDay, rewardDecimals, 6));
+
+  // APR + TVL (USD)
   try {
-    if (cachedAltPriceUsd && totalStaked > 0n) {
-      const tvlAlt = parseFloat(ethers.formatUnits(totalStaked, stakeDecimals));
-      const tvlUsd = tvlAlt * cachedAltPriceUsd;
+    if (cachedAltPriceUsd && total > 0n) {
+      const totalStakedAlt = parseFloat(ethers.formatUnits(total, stakeDecimals));
+      const tvlUsd = totalStakedAlt * cachedAltPriceUsd;
 
-      const dailyUsdc = parseFloat(ethers.formatUnits(dripPerDay, rewardDecimals));
-      const yearlyRewardsUsd = dailyUsdc * 365;
+      // Rewards are USDC, assume $1 per USDC
+      const yearlyRewardsUsdc = parseFloat(ethers.formatUnits(dripPerYear, rewardDecimals));
+      const apr = tvlUsd > 0 ? (yearlyRewardsUsdc / tvlUsd) * 100 : null;
 
-      const apr = tvlUsd > 0 ? (yearlyRewardsUsd / tvlUsd) * 100 : null;
       safeSetText("apr", fmtPct(apr));
+      safeSetText("tvlUsd", fmtUsd(tvlUsd));
     } else {
       safeSetText("apr", "-");
+      safeSetText("tvlUsd", "-");
     }
   } catch (e) {
-    console.error("APR calc failed:", e);
+    console.error(e);
     safeSetText("apr", "-");
+    safeSetText("tvlUsd", "-");
   }
-
-  safeSetText("lastUpdate", `Last refresh: ${new Date().toLocaleTimeString()}`);
 }
 
 async function approveIfNeeded(amountWei) {
   const allowance = await alt.allowance(user, FARM_ADDRESS);
   if (allowance >= amountWei) return;
-
   const tx = await alt.approve(FARM_ADDRESS, amountWei);
   await tx.wait();
 }
 
 async function stake() {
   const val = $("depositAmount")?.value;
-  if (!val || Number(val) <= 0) return alert("Enter deposit amount");
+  if (!val || Number(val) <= 0) return alert("Enter stake amount");
 
   const amountWei = ethers.parseUnits(val, stakeDecimals);
 
@@ -172,7 +229,7 @@ async function stake() {
   const tx = await farm.deposit(amountWei);
   await tx.wait();
 
-  $("depositAmount").value = "";
+  if ($("depositAmount")) $("depositAmount").value = "";
   await refresh();
 }
 
@@ -185,7 +242,7 @@ async function withdraw() {
   const tx = await farm.withdraw(amountWei);
   await tx.wait();
 
-  $("withdrawAmount").value = "";
+  if ($("withdrawAmount")) $("withdrawAmount").value = "";
   await refresh();
 }
 
@@ -195,25 +252,22 @@ async function claim() {
   await refresh();
 }
 
-// Optional: manual pool update so UI “moves”
-async function updatePoolNow() {
-  if (!farm) return;
-  try {
-    safeSetText("lastUpdate", "Updating pool...");
-    const tx = await farm.updatePool();
-    await tx.wait();
-    await refresh();
-    safeSetText("lastUpdate", `Pool updated: ${new Date().toLocaleTimeString()}`);
-  } catch (e) {
-    console.error("updatePool failed:", e);
-    alert("Update Pool failed (see console).");
-    await refresh();
-  }
+// Optional: let anyone trigger pool update (requires gas)
+async function updatePoolTx() {
+  const tx = await farm.updatePool();
+  await tx.wait();
+  await refresh();
 }
 
 // ====== UI HOOKS ======
-if ($("btnConnect")) $("btnConnect").onclick = connect;
-if ($("btnDeposit")) $("btnDeposit").onclick = stake;
-if ($("btnWithdraw")) $("btnWithdraw").onclick = withdraw;
-if ($("btnClaim")) $("btnClaim").onclick = claim;
-if ($("btnUpdate")) $("btnUpdate").onclick = updatePoolNow;
+document.addEventListener("DOMContentLoaded", () => {
+  setButtonsEnabled(false);
+
+  if ($("btnConnect")) $("btnConnect").onclick = connect;
+  if ($("btnDeposit")) $("btnDeposit").onclick = stake;
+  if ($("btnWithdraw")) $("btnWithdraw").onclick = withdraw;
+  if ($("btnClaim")) $("btnClaim").onclick = claim;
+
+  // If you add a button with id="btnUpdatePool" in HTML, it will work.
+  if ($("btnUpdatePool")) $("btnUpdatePool").onclick = updatePoolTx;
+});
