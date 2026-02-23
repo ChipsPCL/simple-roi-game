@@ -7,46 +7,86 @@
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.8.1/dist/ethers.umd.min.js"></script>
 
   <style>
-    body {
-      background: #0b0b0b;
-      color: #fff;
+    :root{
+      --bg:#060a12;
+      --panel:#0b1220;
+      --panel2:#0a162a;
+      --border:#13233f;
+      --text:#eaf2ff;
+      --muted:#9fb2d3;
+      --accent:#2dd4ff;
+      --accent2:#4f46e5;
+    }
+
+    body{
+      background: radial-gradient(1200px 600px at 20% -10%, rgba(79,70,229,.25), transparent 55%),
+                  radial-gradient(900px 500px at 80% 0%, rgba(45,212,255,.18), transparent 55%),
+                  var(--bg);
+      color:var(--text);
       font-family: Arial, sans-serif;
-      max-width: 420px;
-      margin: auto;
-      padding: 20px;
+      max-width:520px;
+      margin:0 auto;
+      padding:14px;
     }
 
-    .box {
-      background: #111;
-      border-radius: 10px;
-      padding: 15px;
-      margin-bottom: 15px;
-      text-align: center;
+    h2{ margin:8px 0 12px; font-size:20px; letter-spacing:.2px; }
+
+    .box{
+      background: linear-gradient(180deg, rgba(11,18,32,.95), rgba(10,22,42,.92));
+      border: 1px solid rgba(19,35,63,.85);
+      border-radius:14px;
+      padding:12px;
+      margin-bottom:10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
     }
 
-    button {
-      width: 100%;
-      padding: 10px;
-      background: #00ffcc;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: bold;
+    .row{ display:flex; gap:8px; align-items:center; }
+    .row > *{ flex:1; }
+
+    .grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+
+    .stat{
+      background: rgba(6,10,18,.55);
+      border: 1px solid rgba(19,35,63,.7);
+      border-radius:12px;
+      padding:10px;
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      font-size:14px;
     }
 
-    input {
-      width: 100%;
-      padding: 8px;
-      margin-bottom: 10px;
-      border-radius: 6px;
-      border: none;
+    .muted{ color:var(--muted); }
+
+    button{
+      width:100%;
+      padding:10px;
+      border:none;
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:800;
+      color:#001018;
+      background: linear-gradient(90deg, var(--accent), rgba(79,70,229,.95));
+      box-shadow: 0 10px 22px rgba(45,212,255,.12);
+    }
+    button:hover{ filter: brightness(1.05); }
+
+    input{
+      width:100%;
+      padding:10px;
+      border-radius:12px;
+      border: 1px solid rgba(19,35,63,.75);
+      background: rgba(6,10,18,.55);
+      color:var(--text);
+      outline:none;
+    }
+    input:focus{
+      border-color: rgba(45,212,255,.65);
+      box-shadow: 0 0 0 3px rgba(45,212,255,.12);
     }
 
-    .muted {
-      color: #9aa0a6;
-      font-size: 12px;
-      margin-top: 8px;
-    }
+    .small{ font-size:12px; color:var(--muted); margin-top:6px; }
+    .center{ text-align:center; }
   </style>
 </head>
 
@@ -56,34 +96,46 @@
 
   <div class="box">
     <button id="btnConnect">Connect Wallet</button>
-    <p id="status">Not connected</p>
-    <p class="muted" id="lastUpdate">—</p>
+    <div class="small center" id="status">Not connected</div>
+    <div class="small center" id="lastUpdate">—</div>
   </div>
 
   <div class="box">
-    <p>Deposited (ALT): <span id="deposited">0</span></p>
-    <p>Pending (USDC): <span id="pending">0</span></p>
-    <p>Reserve (USDC): <span id="reserve">0</span></p>
-    <p>APR (est.): <span id="apr">-</span></p>
+    <div class="grid">
+      <div class="stat"><span class="muted">Deposited (ALT)</span><span id="deposited">0</span></div>
+      <div class="stat"><span class="muted">Pending (USDC)</span><span id="pending">0</span></div>
+      <div class="stat"><span class="muted">Reserve (USDC)</span><span id="reserve">0</span></div>
+      <div class="stat"><span class="muted">APR (est.)</span><span id="apr">-</span></div>
+    </div>
+    <div class="small center">
+      Reserve is the unallocated USDC used for the 3%/day drip.
+    </div>
   </div>
 
   <div class="box">
-    <input type="number" id="depositAmount" placeholder="Deposit ALT amount" />
-    <button id="btnDeposit">Approve & Deposit</button>
+    <div class="row">
+      <input type="number" id="depositAmount" placeholder="Deposit ALT" />
+      <button id="btnDeposit">Deposit</button>
+    </div>
+    <div class="small">Deposit takes 1% fee (contract-side).</div>
   </div>
 
   <div class="box">
-    <input type="number" id="withdrawAmount" placeholder="Withdraw ALT amount" />
-    <button id="btnWithdraw">Withdraw</button>
+    <div class="row">
+      <input type="number" id="withdrawAmount" placeholder="Withdraw ALT" />
+      <button id="btnWithdraw">Withdraw</button>
+    </div>
+    <div class="small">Withdraw takes 2% fee (contract-side).</div>
   </div>
 
   <div class="box">
     <button id="btnClaim">Claim USDC</button>
+    <div class="small center">Claim triggers a pool update before payout.</div>
   </div>
 
   <div class="box">
     <button id="btnUpdate">Update Pool</button>
-    <p class="muted">Optional: forces on-chain update so rewards “move” even if nobody interacts.</p>
+    <div class="small center muted">Optional: calls updatePool() so the UI “moves” even with no user activity.</div>
   </div>
 
   <script src="app.js"></script>
