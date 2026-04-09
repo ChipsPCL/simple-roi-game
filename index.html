@@ -1,73 +1,352 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <title>The 1% Game</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Altitude Simple Miner</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.8.1/dist/ethers.umd.min.js"></script>
+  <style>
+    :root{
+      --bg:#060a12;
+      --panel:#0b1220;
+      --panel2:#0a162a;
+      --border:#13233f;
+      --text:#eaf2ff;
+      --muted:#9fb2d3;
+      --accent:#2dd4ff;
+      --accent2:#4f46e5;
+      --danger:#ff6b6b;
+      --success:#54e38e;
+    }
 
-    <script src="https://cdn.jsdelivr.net/npm/ethers@6.8.1/dist/ethers.umd.min.js"></script>
+    * { box-sizing: border-box; }
 
-    <style>
-        body {
-            background: #0b0b0b;
-            color: #fff;
-            font-family: Arial, sans-serif;
-            max-width: 420px;
-            margin: auto;
-            padding: 20px;
-        }
+    body{
+      background: radial-gradient(1200px 600px at 20% -10%, rgba(79,70,229,.25), transparent 55%),
+                  radial-gradient(900px 500px at 80% 0%, rgba(45,212,255,.18), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+      font-family: Arial, sans-serif;
+      max-width:560px;
+      margin:0 auto;
+      padding:14px;
+    }
 
-        .box {
-            background: #111;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
-            text-align: center;
-        }
+    h2{ margin:8px 0 12px; font-size:20px; letter-spacing:.2px; }
 
-        button {
-            width: 100%;
-            padding: 10px;
-            background: #00ffcc;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-        }
+    .box{
+      background: linear-gradient(180deg, rgba(11,18,32,.95), rgba(10,22,42,.92));
+      border: 1px solid rgba(19,35,63,.85);
+      border-radius:14px;
+      padding:12px;
+      margin-bottom:10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
 
-        input {
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 10px;
-            border-radius: 6px;
-            border: none;
-        }
-    </style>
+    .row{ display:flex; gap:8px; align-items:center; }
+    .row > *{ flex:1; }
+
+    .grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+
+    .stat{
+      background: rgba(6,10,18,.55);
+      border: 1px solid rgba(19,35,63,.7);
+      border-radius:12px;
+      padding:10px;
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      font-size:14px;
+      min-height:44px;
+      align-items:center;
+    }
+
+    .muted{ color:var(--muted); }
+    .good { color: var(--success); }
+    .warn { color: #ffd166; }
+    .bad { color: var(--danger); }
+
+    button{
+      width:100%;
+      padding:10px;
+      border:none;
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:800;
+      color:#001018;
+      background: linear-gradient(90deg, var(--accent), rgba(79,70,229,.95));
+      box-shadow: 0 10px 22px rgba(45,212,255,.12);
+    }
+    button:hover{ filter: brightness(1.05); }
+    button:disabled{ opacity:.65; cursor:not-allowed; }
+
+    input{
+      width:100%;
+      padding:10px;
+      border-radius:12px;
+      border: 1px solid rgba(19,35,63,.75);
+      background: rgba(6,10,18,.55);
+      color:var(--text);
+      outline:none;
+    }
+    input:focus{
+      border-color: rgba(45,212,255,.65);
+      box-shadow: 0 0 0 3px rgba(45,212,255,.12);
+    }
+
+    .small{ font-size:12px; color:var(--muted); margin-top:6px; }
+    .center{ text-align:center; }
+    .full { grid-column: 1 / -1; }
+
+    .pill {
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(19,35,63,.75);
+      background: rgba(6,10,18,.45);
+      font-size:12px;
+      color:var(--muted);
+    }
+  </style>
 </head>
-
 <body>
+  <h2>⛰️ Altitude Simple Miner</h2>
 
-<h2>🔥 The 1% Game </h2>
-
-<div class="box">
+  <div class="box">
     <button id="btnConnect">Connect Wallet</button>
-    <p id="status">Not connected</p>
-</div>
+    <div class="small center" id="status">Not connected</div>
+    <div class="small center" id="lastUpdate">—</div>
+  </div>
 
-<div class="box">
-    <p>Deposited: <span id="deposited">0</span></p>
-    <p>Pending: <span id="pending">0</span></p>
-    <p>Claimed: <span id="claimed">0</span></p>
-</div>
+  <div class="box">
+    <div class="grid">
+      <div class="stat"><span class="muted">Your Deposit</span><span id="userDeposit">0</span></div>
+      <div class="stat"><span class="muted">Available Rewards</span><span id="availableRewards">0</span></div>
+      <div class="stat"><span class="muted">Daily Rate</span><span id="dailyRate">-</span></div>
+      <div class="stat"><span class="muted">APR</span><span id="apr">-</span></div>
+      <div class="stat"><span class="muted">Total Claimed</span><span id="totalClaimed">0</span></div>
+      <div class="stat"><span class="muted">Max Payout</span><span id="maxPayout">0</span></div>
+      <div class="stat"><span class="muted">Contract Balance</span><span id="contractBalance">0</span></div>
+      <div class="stat"><span class="muted">Deposits</span><span id="depositsEnabled">-</span></div>
+      <div class="stat full"><span class="muted">Time Until Rewards Stop</span><span id="timeUntilStop">-</span></div>
+    </div>
+    <div class="small center" id="uiNote">Rewards accrue on net deposits, capped at 48 hours unless claimed or refreshed by a new deposit.</div>
+  </div>
 
-<div class="box">
-    <input type="number" id="depositAmount" placeholder="Deposit amount" />
-    <button id="btnDeposit">Approve & Deposit</button>
-</div>
-    
-<div class="box">
-    <button id="btnClaim">Claim Rewards</button>
-</div>
+  <div class="box">
+    <div class="row">
+      <input type="number" id="depositAmount" placeholder="Deposit USDC" min="0" step="0.01" />
+      <button id="btnDeposit">Deposit</button>
+    </div>
+    <div class="small">Deposit auto-claims pending rewards first. Deposit fee applies.</div>
+  </div>
 
-<script src="app.js"></script>
+  <div class="box">
+    <button id="btnClaim">Claim</button>
+    <div class="small center">Claim resets the 48 hour earning timer.</div>
+  </div>
+
+  <script>
+    // ===== CONFIG =====
+    const CONTRACT_ADDRESS = "PASTE_DEPLOYED_CONTRACT_ADDRESS_HERE";
+    const USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+    const REFRESH_MS = 15000;
+    const USDC_DECIMALS = 6;
+
+    const minerABI = [
+      "function claim()",
+      "function deposit(uint256 amount)",
+      "function claimFeeBP() view returns (uint256)",
+      "function dailyRateBP() view returns (uint256)",
+      "function depositFeeBP() view returns (uint256)",
+      "function depositsEnabled() view returns (bool)",
+      "function getUser(address account) view returns ((uint256 grossDeposits,uint256 netDeposits,uint256 grossClaimed,uint256 netClaimed,uint256 lastCheckpoint,bool hasDeposited))",
+      "function maxAccrualTime() view returns (uint256)",
+      "function minimumDeposit() view returns (uint256)",
+      "function previewClaim(address account) view returns (uint256 grossReward,uint256 feeAmount,uint256 netReward)",
+      "function rewardReserve() view returns (uint256)",
+      "function userMaxPayout(address account) view returns (uint256)",
+      "function userRemainingToCap(address account) view returns (uint256)"
+    ];
+
+    const erc20ABI = [
+      "function approve(address spender, uint256 amount) returns (bool)",
+      "function allowance(address owner, address spender) view returns (uint256)",
+      "function balanceOf(address account) view returns (uint256)",
+      "function decimals() view returns (uint8)"
+    ];
+
+    // ===== STATE =====
+    let provider, signer, userAddress, miner, usdc;
+    let refreshHandle = null;
+
+    // ===== HELPERS =====
+    const $ = (id) => document.getElementById(id);
+
+    function fmtUsdc(value) {
+      try {
+        const num = Number(ethers.formatUnits(value, USDC_DECIMALS));
+        return num.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 6 });
+      } catch {
+        return "0";
+      }
+    }
+
+    function fmtPercentFromBP(bp) {
+      return (Number(bp) / 100).toFixed(2) + "%";
+    }
+
+    function fmtAprFromDailyBP(bp) {
+      const dailyPct = Number(bp) / 100;
+      return (dailyPct * 365).toFixed(2) + "%";
+    }
+
+    function fmtTimeLeft(seconds) {
+      if (seconds <= 0) return "Accrual capped — claim to continue";
+      const h = Math.floor(seconds / 3600);
+      const m = Math.floor((seconds % 3600) / 60);
+      const s = Math.floor(seconds % 60);
+      return `${h}h ${m}m ${s}s`;
+    }
+
+    function setStatus(text) {
+      $("status").innerText = text;
+    }
+
+    function setLastUpdate() {
+      $("lastUpdate").innerText = `Updated: ${new Date().toLocaleTimeString()}`;
+    }
+
+    async function approveIfNeeded(amountWei) {
+      const allowance = await usdc.allowance(userAddress, CONTRACT_ADDRESS);
+      if (allowance >= amountWei) return;
+      const tx = await usdc.approve(CONTRACT_ADDRESS, amountWei);
+      setStatus("Approving USDC...");
+      await tx.wait();
+    }
+
+    async function connectWallet() {
+      if (!window.ethereum) {
+        alert("No wallet found. Install MetaMask, Rabby, or Coinbase Wallet.");
+        return;
+      }
+
+      provider = new ethers.BrowserProvider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      signer = await provider.getSigner();
+      userAddress = await signer.getAddress();
+
+      miner = new ethers.Contract(CONTRACT_ADDRESS, minerABI, signer);
+      usdc = new ethers.Contract(USDC, erc20ABI, signer);
+
+      setStatus(`Connected: ${userAddress}`);
+      await refresh();
+
+      if (refreshHandle) clearInterval(refreshHandle);
+      refreshHandle = setInterval(refresh, REFRESH_MS);
+    }
+
+    async function refresh() {
+      if (!miner || !userAddress) return;
+
+      try {
+        const [
+          user,
+          preview,
+          dailyRateBP,
+          reserve,
+          maxPayout,
+          depositsEnabled,
+          maxAccrualTime,
+          minimumDeposit,
+          depositFeeBP,
+          claimFeeBP
+        ] = await Promise.all([
+          miner.getUser(userAddress),
+          miner.previewClaim(userAddress),
+          miner.dailyRateBP(),
+          miner.rewardReserve(),
+          miner.userMaxPayout(userAddress),
+          miner.depositsEnabled(),
+          miner.maxAccrualTime(),
+          miner.minimumDeposit(),
+          miner.depositFeeBP(),
+          miner.claimFeeBP()
+        ]);
+
+        $("userDeposit").innerText = fmtUsdc(user.netDeposits);
+        $("availableRewards").innerText = fmtUsdc(preview.netReward);
+        $("dailyRate").innerText = fmtPercentFromBP(dailyRateBP);
+        $("apr").innerText = fmtAprFromDailyBP(dailyRateBP);
+        $("totalClaimed").innerText = fmtUsdc(user.netClaimed);
+        $("maxPayout").innerText = fmtUsdc(maxPayout);
+        $("contractBalance").innerText = fmtUsdc(reserve);
+        $("depositsEnabled").innerText = depositsEnabled ? "Enabled" : "Disabled";
+        $("depositsEnabled").className = depositsEnabled ? "good" : "bad";
+
+        const now = Math.floor(Date.now() / 1000);
+        let timeLeftText = "-";
+
+        if (user.hasDeposited && Number(user.lastCheckpoint) > 0) {
+          const elapsed = Math.max(0, now - Number(user.lastCheckpoint));
+          const cappedLeft = Math.max(0, Number(maxAccrualTime) - elapsed);
+          timeLeftText = fmtTimeLeft(cappedLeft);
+        }
+
+        $("timeUntilStop").innerText = timeLeftText;
+        $("uiNote").innerText = `Min deposit: ${fmtUsdc(minimumDeposit)} USDC • Deposit fee: ${fmtPercentFromBP(depositFeeBP)} • Claim fee: ${fmtPercentFromBP(claimFeeBP)}`;
+        setLastUpdate();
+      } catch (err) {
+        console.error(err);
+        setStatus("Refresh failed");
+      }
+    }
+
+    async function deposit() {
+      if (!miner || !userAddress) return alert("Connect wallet first");
+
+      const raw = $("depositAmount").value.trim();
+      if (!raw || Number(raw) <= 0) return alert("Enter deposit amount");
+
+      try {
+        const amountWei = ethers.parseUnits(raw, USDC_DECIMALS);
+        await approveIfNeeded(amountWei);
+        setStatus("Submitting deposit...");
+        const tx = await miner.deposit(amountWei);
+        await tx.wait();
+        $("depositAmount").value = "";
+        setStatus("Deposit successful");
+        await refresh();
+      } catch (err) {
+        console.error(err);
+        setStatus("Deposit failed");
+        alert(err?.shortMessage || err?.reason || err?.message || "Deposit failed");
+      }
+    }
+
+    async function claim() {
+      if (!miner || !userAddress) return alert("Connect wallet first");
+
+      try {
+        setStatus("Submitting claim...");
+        const tx = await miner.claim();
+        await tx.wait();
+        setStatus("Claim successful");
+        await refresh();
+      } catch (err) {
+        console.error(err);
+        setStatus("Claim failed");
+        alert(err?.shortMessage || err?.reason || err?.message || "Claim failed");
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      $("btnConnect").onclick = connectWallet;
+      $("btnDeposit").onclick = deposit;
+      $("btnClaim").onclick = claim;
+    });
+  </script>
 </body>
 </html>
